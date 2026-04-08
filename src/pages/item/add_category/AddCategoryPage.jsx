@@ -1,16 +1,18 @@
 import React, { useState } from 'react';
-import Header from '../../../components/Header';
+import { useNavigate } from 'react-router-dom';
+import Layout from '../../../components/Layout';
 import '../add_item/AddItemPage.css';
-import Footer from '../../../components/Footer';
 
 function AddCategoryPage() {
+  const navigate = useNavigate();
   const [catName, setCatName] = useState('');
   const [description, setDescription] = useState('');
   const [catNameError, setCatNameError] = useState('');
   const [descriptionError, setDescriptionError] = useState('');
 
+
   const handleBackToMain = () => {
-    window.location.href = '/dashboard';
+    navigate('/dashboard');
   };
 
   const handleSubmit = async (e) => {
@@ -31,8 +33,7 @@ function AddCategoryPage() {
   };
 
   return (
-    <div className="min-h-dvh max-lg:h-fit flex flex-col h-dvh">
-      <Header onBackToMain={handleBackToMain} />
+    <Layout onBackToMain={handleBackToMain}>
       <div className="flex flex-col h-[90%]">
         {/* Breadcrumbs */}
         <div className="px-12 py-5 max-sm:px-6">
@@ -87,8 +88,8 @@ function AddCategoryPage() {
         </div>
         <div className="flex-grow"></div>
       </div>
-      <Footer />
-    </div>
+      
+    </Layout>
   );
 }
 

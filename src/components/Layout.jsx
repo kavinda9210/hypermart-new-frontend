@@ -1,11 +1,15 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import Header from '../components/Header';
 import Footer from '../components/Footer';
 
 const Layout = ({ children, onBackToMain }) => {
+  const navigate = useNavigate();
+  const handleBackToMain = onBackToMain || (() => navigate('/dashboard'));
+
   return (
     <div className="dashbord-page min-h-dvh max-lg:h-fit flex flex-col h-dvh">
-      <Header onBackToMain={onBackToMain} />
+      <Header onBackToMain={handleBackToMain} />
       <div className="flex-grow flex flex-col">
         {children}
       </div>

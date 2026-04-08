@@ -1,0 +1,43 @@
+/* Add any custom styles for ItemListPage here, or import Tailwind in your main CSS */
+.pagination {
+  width: 100%;
+  margin: 0px 50px;
+  padding-top: 20px;
+}
+
+@media (max-width: 768px) {
+  #itemsTable td.hidden,
+  #itemsTable th.hidden {
+    display: none;
+  }
+  #itemsTable {
+    border-collapse: collapse;
+    width: 100%;
+  }
+  #itemsTable td,
+  #itemsTable th {
+    padding: 10px;
+    text-align: left;
+  }
+  #itemsTable td {
+    display: block;
+    width: 100%;
+    box-sizing: border-box;
+  }
+  #itemsTable tr {
+    display: block;
+    margin-bottom: 15px;
+  }
+  #itemsTable tr td:first-child {
+    font-weight: bold;
+  }
+  #itemsTable td span {
+    display: block;
+    margin-top: 5px;
+  }
+  #itemsTable td button {
+    display: block;
+    width: 100%;
+    margin-bottom: 5px;
+  }
+}

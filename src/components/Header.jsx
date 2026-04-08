@@ -4,7 +4,12 @@ function Header({
   onToggleFullscreen,
   showMainPanelButton = true,
   showPosButton = true,
+  showLogo,
 }) {
+  // Original behavior: show logo everywhere by default.
+  // Can be overridden by passing showLogo={true|false}.
+  const shouldShowLogo = typeof showLogo === 'boolean' ? showLogo : true;
+
   const getGreeting = () => {
     const hour = new Date().getHours();
 
@@ -66,13 +71,15 @@ function Header({
         )}
       </span>
 
-      <div className="absolute left-1/2 transform -translate-x-1/2 hidden sm:block">
-        <img
-          src="./images/logo.png"
-          alt="Logo"
-          className="h-14 max-sm:h-8 bg-white p-1 rounded-full"
-        />
-      </div>
+      {shouldShowLogo && (
+        <div className="absolute left-1/2 transform -translate-x-1/2 hidden sm:block">
+          <img
+            src="/images/logo.png"
+            alt="Logo"
+            className="h-14 max-sm:h-8 bg-white p-1 rounded-full"
+          />
+        </div>
+      )}
 
       <span className="flex items-center gap-3 mr-20 max-lg:mr-0 max-sm:scale-75">
         <div className="flex flex-col items-end text-right">

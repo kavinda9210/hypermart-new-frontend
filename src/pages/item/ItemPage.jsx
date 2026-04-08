@@ -1,16 +1,27 @@
 
 import Layout from '../../components/Layout';
+import { useNavigate } from 'react-router-dom';
 
 
-function ItemPage({ onBackToMain, onAddNewItem, onAddNewCategory }) {
+function ItemPage({ onBackToMain, onAddNewItem, onAddNewCategory, onItemList }) {
+  const navigate = useNavigate();
   const handleAddNewItem = (e) => {
     e.preventDefault();
     if (onAddNewItem) onAddNewItem();
+    else navigate('/item/add_item');
   };
   const handleAddNewCategory = (e) => {
     e.preventDefault();
     if (onAddNewCategory) onAddNewCategory();
+    else navigate('/item/add_category');
   };
+
+  const handleItemList = (e) => {
+    e.preventDefault();
+    if (onItemList) onItemList();
+    else navigate('/item/item_list');
+  };
+
 
   return (
     <Layout onBackToMain={onBackToMain}>
@@ -60,12 +71,13 @@ function ItemPage({ onBackToMain, onAddNewItem, onAddNewCategory }) {
               <p className="text-center max-sm:text-sm">Add New Category</p>
             </button>
             {/* Items List */}
-            <a href=" /item/item_list">
-              <div className="w-[200px] max-lg:w-[150px] h-[200px] max-lg:h-[150px] bg-[#3c8c2c] rounded-lg flex flex-col gap-3 justify-center items-center hover:scale-90 transition-all xl:scalee-[110%] 2xl:scale-[110%] cursor-pointer">
-                <div className="w-10 h-10" style={{ background: "url(' /images/items/itemList.png') no-repeat", backgroundSize: 'cover' }}></div>
-                <p className="text-center max-sm:text-sm">Items List</p>
-              </div>
-            </a>
+            <button
+              onClick={handleItemList}
+              className="w-[200px] max-lg:w-[150px] h-[200px] max-lg:h-[150px] bg-[#3c8c2c] rounded-lg flex flex-col gap-3 justify-center items-center hover:scale-90 transition-all xl:scalee-[110%] 2xl:scale-[110%] cursor-pointer"
+            >
+              <div className="w-10 h-10" style={{ background: "url(' /images/items/itemList.png') no-repeat", backgroundSize: 'cover' }}></div>
+              <p className="text-center max-sm:text-sm">Items List</p>
+            </button>
             {/* Category List */}
             <a href=" /item/category_list">
               <div className="w-[200px] max-lg:w-[150px] h-[200px] max-lg:h-[150px] bg-[#3c8c2c] rounded-lg flex flex-col gap-3 justify-center items-center hover:scale-90 transition-all xl:scalee-[110%] 2xl:scale-[110%] cursor-pointer">

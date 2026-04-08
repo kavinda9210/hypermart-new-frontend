@@ -1,10 +1,12 @@
-import React, { useState } from 'react';
+import React from 'react';
+import { Navigate, Route, Routes, useNavigate } from 'react-router-dom';
 import Dashboard from './pages/Dashboard';
 import DashbordDashboard from './pages/dashbord/Dashboard';
 import Billing from './pages/sales/Billing';
 import ItemPage from './pages/item/ItemPage';
 import AddItemPage from './pages/item/add_item/AddItemPage';
 import AddCategoryPage from './pages/item/add_category/AddCategoryPage';
+import ItemListPage from './pages/item/item_list/ItemListPage';
 import SalesPage from './pages/sales/SalesPage';
 import UsersPage from './pages/users/UsersPage';
 import CustomersPage from './pages/customers/CustomersPage';
@@ -15,55 +17,53 @@ import ReportsPage from './pages/reports/ReportsPage';
 import SettingsPage from './pages/settings/SettingsPage';
 
 function App() {
-  const [activePage, setActivePage] = useState('main-panel');
+  const navigate = useNavigate();
+  const goToMainPanel = () => navigate('/dashboard');
 
   return (
     <div className="App">
-      {activePage === 'main-panel' ? (
-        <Dashboard
-          onOpenDashbord={() => setActivePage('dashbord-dashboard')}
-          onOpenBilling={() => setActivePage('billing')}
-          onOpenItem={() => setActivePage('item')}
-          onOpenSales={() => setActivePage('sales')}
-          onOpenUsers={() => setActivePage('users')}
-          onOpenCustomers={() => setActivePage('customers')}
-          onOpenSuppliers={() => setActivePage('suppliers')}
-          onOpenExpenses={() => setActivePage('expenses')}
-          onOpenFinance={() => setActivePage('finance')}
-          onOpenReports={() => setActivePage('reports')}
-          onOpenSettings={() => setActivePage('settings')}
+      <Routes>
+        <Route path="/" element={<Navigate to="/dashboard" replace />} />
+
+        <Route
+          path="/dashboard"
+          element={
+            <Dashboard
+              onOpenDashbord={() => navigate('/dashboard/dashboard')}
+              onOpenBilling={() => navigate('/sales/billing')}
+              onOpenItem={() => navigate('/item')}
+              onOpenSales={() => navigate('/sales/sales')}
+              onOpenUsers={() => navigate('/users/users')}
+              onOpenCustomers={() => navigate('/customers/customers')}
+              onOpenSuppliers={() => navigate('/suppliers/suppliers')}
+              onOpenExpenses={() => navigate('/expenses/expenses')}
+              onOpenFinance={() => navigate('/finance')}
+              onOpenReports={() => navigate('/reports/reports')}
+              onOpenSettings={() => navigate('/settings/settings')}
+            />
+          }
         />
-      ) : activePage === 'billing' ? (
-        <Billing onBackToMain={() => setActivePage('main-panel')} />
-      ) : activePage === 'item' ? (
-        <ItemPage 
-          onBackToMain={() => setActivePage('main-panel')} 
-          onAddNewItem={() => setActivePage('add-item')}
-          onAddNewCategory={() => setActivePage('add-category')}
-        />
-      ) : activePage === 'add-item' ? (
-        <AddItemPage />
-      ) : activePage === 'add-category' ? (
-        <AddCategoryPage />
-      ) : activePage === 'sales' ? (
-        <SalesPage onBackToMain={() => setActivePage('main-panel')} />
-      ) : activePage === 'users' ? (
-        <UsersPage onBackToMain={() => setActivePage('main-panel')} />
-      ) : activePage === 'customers' ? (
-        <CustomersPage onBackToMain={() => setActivePage('main-panel')} />
-      ) : activePage === 'suppliers' ? (
-        <SuppliersPage onBackToMain={() => setActivePage('main-panel')} />
-      ) : activePage === 'expenses' ? (
-        <ExpensesPage onBackToMain={() => setActivePage('main-panel')} />
-      ) : activePage === 'finance' ? (
-        <FinancePage onBackToMain={() => setActivePage('main-panel')} />
-      ) : activePage === 'reports' ? (
-        <ReportsPage onBackToMain={() => setActivePage('main-panel')} />
-      ) : activePage === 'settings' ? (
-        <SettingsPage onBackToMain={() => setActivePage('main-panel')} />
-      ) : (
-        <DashbordDashboard onBackToMain={() => setActivePage('main-panel')} />
-      )}
+
+        <Route path="/dashboard/dashboard" element={<DashbordDashboard onBackToMain={goToMainPanel} />} />
+
+        <Route path="/sales/billing" element={<Billing onBackToMain={goToMainPanel} />} />
+        <Route path="/sales/sales" element={<SalesPage onBackToMain={goToMainPanel} />} />
+
+        <Route path="/item" element={<ItemPage onBackToMain={goToMainPanel} />} />
+        <Route path="/item/add_item" element={<AddItemPage />} />
+        <Route path="/item/add_category" element={<AddCategoryPage />} />
+        <Route path="/item/item_list" element={<ItemListPage />} />
+
+        <Route path="/users/users" element={<UsersPage onBackToMain={goToMainPanel} />} />
+        <Route path="/customers/customers" element={<CustomersPage onBackToMain={goToMainPanel} />} />
+        <Route path="/suppliers/suppliers" element={<SuppliersPage onBackToMain={goToMainPanel} />} />
+        <Route path="/expenses/expenses" element={<ExpensesPage onBackToMain={goToMainPanel} />} />
+        <Route path="/finance" element={<FinancePage onBackToMain={goToMainPanel} />} />
+        <Route path="/reports/reports" element={<ReportsPage onBackToMain={goToMainPanel} />} />
+        <Route path="/settings/settings" element={<SettingsPage onBackToMain={goToMainPanel} />} />
+
+        <Route path="*" element={<Navigate to="/dashboard" replace />} />
+      </Routes>
     </div>
   );
 }

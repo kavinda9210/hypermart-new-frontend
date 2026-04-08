@@ -1,4 +1,5 @@
 import React, { useRef, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 // Simple custom searchable dropdown component
 function SearchableSelect({ label, options, value, onChange, placeholder, name, required, error }) {
   const [search, setSearch] = useState('');
@@ -42,10 +43,11 @@ function SearchableSelect({ label, options, value, onChange, placeholder, name, 
     </div>
   );
 }
-import Header from '../../../components/Header';
+import Layout from '../../../components/Layout';
 import './AddItemPage.css';
 
 function AddItemPage() {
+  const navigate = useNavigate();
   const [expiryEnabled, setExpiryEnabled] = useState(false);
   const [imagePreview, setImagePreview] = useState(null);
   const [imageName, setImageName] = useState('');
@@ -71,7 +73,7 @@ function AddItemPage() {
   ];
 
   const handleBackToMain = () => {
-    window.location.href = '/dashboard';
+    navigate('/dashboard');
   };
 
   const handleExpiryToggle = (e) => {
@@ -92,8 +94,7 @@ function AddItemPage() {
   };
 
   return (
-    <div className="min-h-dvh max-lg:h-fit flex flex-col h-dvh">
-      <Header onBackToMain={handleBackToMain} />
+    <Layout onBackToMain={handleBackToMain}>
       <div className="flex flex-col h-[90%]">
         {/* Breadcrumbs */}
         <div className="px-12 py-5 max-sm:px-6">
@@ -260,11 +261,8 @@ function AddItemPage() {
           </div>
         </div>
         <div className="flex-grow"></div>
-        <footer className="bg-[#3c8c2c] py-4 text-center text-[#ffffff]">
-          <p>2026 © All Rights Reserved | Hypermart | Designed and Developed by Silicon Radon Networks (Pvt) Ltd</p>
-        </footer>
       </div>
-    </div>
+    </Layout>
   );
 }
 

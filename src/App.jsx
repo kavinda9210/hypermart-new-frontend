@@ -9,6 +9,7 @@ import AddCategoryPage from './pages/item/add_category/AddCategoryPage';
 import ItemListPage from './pages/item/item_list/ItemListPage';
 import CategoryListPage from './pages/item/category/CategoryListPage';
 import ImportItem from './pages/item/import_item/ImportItem';
+import GenerateQRCode from './pages/item/GenerateQRCode/GenerateQRCode';
 import SalesPage from './pages/sales/SalesPage';
 import UsersPage from './pages/users/UsersPage';
 import CustomersPage from './pages/customers/CustomersPage';
@@ -17,6 +18,7 @@ import ExpensesPage from './pages/expenses/ExpensesPage';
 import FinancePage from './pages/finance/FinancePage';
 import ReportsPage from './pages/reports/ReportsPage';
 import SettingsPage from './pages/settings/SettingsPage';
+
 
 
 function App() {
@@ -58,7 +60,8 @@ function App() {
         <Route path="/item/item_list" element={<ItemListPage />} />
         <Route path="/item/category_list" element={<CategoryListPage />} />
         <Route path="/item/importItem" element={<ImportItem />} />
-        <Route path="/item/import_item" element={<Navigate to="/item/importItem" replace />} />
+        <Route path="/item/generate_qr_code" element={<GenerateQRCode />} />
+        <Route path="/item/genarateCode" element={<Navigate to="/item/generate_qr_code" replace />} />
         <Route path="/users/users" element={<UsersPage onBackToMain={goToMainPanel} />} />
         <Route path="/customers/customers" element={<CustomersPage onBackToMain={goToMainPanel} />} />
         <Route path="/suppliers/suppliers" element={<SuppliersPage onBackToMain={goToMainPanel} />} />

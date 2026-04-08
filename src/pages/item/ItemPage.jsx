@@ -33,6 +33,12 @@ function ItemPage({ onBackToMain, onAddNewItem, onAddNewCategory, onItemList }) 
     navigate('/item/importItem');
   };
 
+  const handleGenerateCode = (e) => {
+    e.preventDefault();
+    navigate('/item/generate_qr_code');
+  };
+  
+
 
   return (
     <Layout onBackToMain={onBackToMain}>
@@ -100,7 +106,7 @@ function ItemPage({ onBackToMain, onAddNewItem, onAddNewCategory, onItemList }) 
               <p className="text-center max-sm:text-sm">Import Item</p>
             </button>
             {/* Genarate QR/Barcode */}
-            <a href=" /item/genarateCode">
+            <a  onClick={handleGenerateCode}>
               <div className="w-[200px] max-lg:w-[150px] border-2 border-[#1b4f72] h-[200px] max-lg:h-[150px] bg-[#3c8c2c] text-white rounded-lg flex flex-col gap-3 justify-center items-center hover:scale-90 transition-all xl:scalee-[110%] 2xl:scale-[110%] cursor-pointer">
                 <div className="w-10 h-10" style={{ background: "url(' /images/items/AddNewCategory.png') no-repeat", backgroundSize: 'cover' }}></div>
                 <p className="text-center max-sm:text-sm">Genarate QR/Barcode</p>

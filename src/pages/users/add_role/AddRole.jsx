@@ -72,9 +72,7 @@ const AddRole = () => {
           </div>
         </div>
         <div className="flex-grow"></div>
-        <footer className="bg-[#3c8c2c] py-4 text-center text-[#ffffff]">
-          <p>2026 © All Rights Reserved | Hypermart | Designed and Developed by Silicon Radon Networks (Pvt) Ltd</p>
-        </footer>
+        
       </div>
     </Layout>
   );

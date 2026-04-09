@@ -1,3 +1,6 @@
+import PaymentDetails from './pages/sales/payment_details/PaymentDetails';
+import CustomerInvoice from './pages/sales/customer_invoice/CusomerInvoice';
+import ReturnListView from './pages/sales/return_list_view/ReturnListView';
 import React from 'react';
 import { Navigate, Route, Routes, useNavigate } from 'react-router-dom';
 // Dashboard and Main Panel
@@ -23,6 +26,7 @@ import UpdateStock from './pages/stock/update_stock/UpdateStock';
 import ViewRelatedStock from './pages/stock/view_related_stock/ViewRelatedStock';
 // Sales Management
 import SalesPage from './pages/sales/SalesPage';
+import SalesItem from './pages/sales/sales_item/SalesItem';
 
 // Due Amount
 import DueAmount from './pages/sales/dueAmount/DueAmount';
@@ -82,6 +86,12 @@ function App() {
           {/* Sales */}
         <Route path="/sales/billing" element={<Billing onBackToMain={goToMainPanel} />} />
         <Route path="/sales/sales" element={<SalesPage onBackToMain={goToMainPanel} />} />
+        <Route path="/sales/sales_item" element={<SalesItem />} />
+        <Route path="/sales/return_list_view" element={<ReturnListView />} />
+        <Route path="/sales/payment_details" element={<PaymentDetails />} />
+
+        {/* Customer Invoice */}
+        <Route path="/sales/customer_invoice" element={<CustomerInvoice />} />
 
           {/* Item Management */}
         <Route path="/item" element={<ItemPage onBackToMain={goToMainPanel} />} />

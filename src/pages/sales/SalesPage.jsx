@@ -1,8 +1,24 @@
 import React from 'react';
 import Layout from '../../components/Layout';
 import './SalesPage.css';
+import { useNavigate } from 'react-router-dom';
 
 const SalesPage = () => {
+
+  const navigate = useNavigate();
+
+    const handleSaleItemList = (e) => {
+      e.preventDefault();
+      navigate('/sales/sales_item');
+    };
+
+    const handleReturnListView = (e) => {
+      e.preventDefault();
+      navigate('/sales/return_list_view');
+    };
+ 
+
+
   return (
     <Layout>
       <div className="min-h-dvh max-lg:h-fit flex flex-col h-dvh bg-white">
@@ -39,18 +55,24 @@ const SalesPage = () => {
         <div className="flex flex-col flex-grow justify-start items-center">
           <div className="h-full w-fit">
             <div className="grid grid-cols-2 place-content-center justify-items-center h-full gap-6 text-white 2xl:scale-[110%] ">
-              <a href="#">
-                <div className="w-[200px] max-lg:w-[150px] max-sm:w-[100px] border-2 border-[#1b4f72] h-[200px] max-lg:h-[150px] max-sm:h-[100px] bg-[#3c8c2c] text-white rounded-lg flex flex-col gap-3 justify-center items-center hover:scale-90 transition-all">
-                  <div className="w-10 h-10" style={{background: "url('../images/sales/salesItemList.png') no-repeat", backgroundSize: 'cover'}}></div>
-                  <p className="text-center max-sm:text-sm">Sales Items List</p>
-                </div>
-              </a>
-              <a href="#">
-                <div className="w-[200px] max-lg:w-[150px] max-sm:w-[100px] border-2 border-[#1b4f72] h-[200px] max-lg:h-[150px] max-sm:h-[100px] bg-[#3c8c2c] text-white rounded-lg flex flex-col gap-3 justify-center items-center hover:scale-90 transition-all">
-                  <div className="w-10 h-10" style={{background: "url('../images/sales/returnLiistView.png') no-repeat", backgroundSize: 'contain', backgroundPosition: 'center'}}></div>
-                  <p className="text-center max-sm:text-sm">Returns List View</p>
-                </div>
-              </a>
+              <button
+                type="button"
+                onClick={handleSaleItemList}
+                className="w-[200px] max-lg:w-[150px] border-2 border-[#1b4f72] h-[200px] max-lg:h-[150px] bg-[#3c8c2c] text-white rounded-lg flex flex-col gap-3 justify-center items-center hover:scale-90 transition-all 2xl:scale-[110%] cursor-pointer focus:outline-none"
+                style={{ padding: 0, border: 'none' }}
+              >
+                <div className="w-10 h-10" style={{ background: "url('/images/sales/salesItemList.png') no-repeat", backgroundSize: 'cover' }}></div>
+                <p className="text-center max-sm:text-sm">Sales Items List</p>
+              </button>
+              <button
+                type="button"
+                onClick={handleReturnListView}
+                className="w-[200px] max-lg:w-[150px] border-2 border-[#1b4f72] h-[200px] max-lg:h-[150px] bg-[#3c8c2c] text-white rounded-lg flex flex-col gap-3 justify-center items-center hover:scale-90 transition-all 2xl:scale-[110%] cursor-pointer focus:outline-none"
+                style={{ padding: 0, border: 'none' }}
+              >
+                <div className="w-10 h-10" style={{ background: "url('/images/sales/returnLiistView.png') no-repeat", backgroundSize: 'contain', backgroundPosition: 'center' }}></div>
+                <p className="text-center max-sm:text-sm">Returns List View</p>
+              </button>
             </div>
           </div>
         </div>

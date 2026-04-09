@@ -1,11 +1,12 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef } from 'react';
 import Layout from '../../../components/Layout';
 import './ItemListPage.css';
+import { useNavigate } from 'react-router-dom'; // <-- Add this import
 
 const ItemListPage = () => {
-    // Sorting state
-    const [sortKey, setSortKey] = useState('');
-    const [sortOrder, setSortOrder] = useState('asc');
+  // Sorting state
+  const [sortKey, setSortKey] = useState('');
+  const [sortOrder, setSortOrder] = useState('asc');
   // State for filter dropdowns (must be at the top before usage)
   const [showCategoryDropdown, setShowCategoryDropdown] = useState(false);
   const [showSupplierDropdown, setShowSupplierDropdown] = useState(false);
@@ -90,6 +91,15 @@ const ItemListPage = () => {
         ? prev.filter((col) => col !== key)
         : [...prev, key]
     );
+  };
+
+  // Add navigate hook
+  const navigate = useNavigate();
+
+  // Edit button handler
+  const handleEditItem = (e) => {
+    e.preventDefault();
+    navigate(`/item/edit_item/`);
   };
 
   return (
@@ -287,8 +297,6 @@ const ItemListPage = () => {
               )}
             </div>
           </div>
-
-
         </div>
 
         {/* Table */}
@@ -381,7 +389,7 @@ const ItemListPage = () => {
                           </td>;
                         if (col.key === 'manage')
                           return <td key={col.key} className="px-4 py-2 flex flex-wrap gap-2">
-                            <button className="p-2 border-2 rounded-lg">Edit</button>
+                            <button onClick={handleEditItem}  className="p-2 border-2 rounded-lg">Edit</button>
                             <button className="p-2 text-white bg-red-600 border-2 rounded-lg">Out Of stock</button>
                           </td>;
                         return null;
@@ -434,6 +442,6 @@ const ItemListPage = () => {
       </div>
     </Layout>
   );
+};
 
-}
 export default ItemListPage;

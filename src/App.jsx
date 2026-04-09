@@ -1,22 +1,39 @@
 import React from 'react';
 import { Navigate, Route, Routes, useNavigate } from 'react-router-dom';
+// Dashboard and Main Panel
 import Dashboard from './pages/Dashboard';
 import DashbordDashboard from './pages/dashbord/Dashboard';
+// Billing and Sales
 import Billing from './pages/sales/Billing';
+// Item Management
 import ItemPage from './pages/item/ItemPage';
 import AddItemPage from './pages/item/add_item/AddItemPage';
 import AddCategoryPage from './pages/item/add_category/AddCategoryPage';
 import ItemListPage from './pages/item/item_list/ItemListPage';
 import CategoryListPage from './pages/item/category/CategoryListPage';
+import EditItemPage from './pages/item/item_list/EditItemPage';
+import EditCategory from './pages/item/category/EditCategory';
 import ImportItem from './pages/item/import_item/ImportItem';
 import GenerateQRCode from './pages/item/GenerateQRCode/GenerateQRCode';
+
+// Sales Management
 import SalesPage from './pages/sales/SalesPage';
+
+// User Management
 import UsersPage from './pages/users/UsersPage';
+// Customer Management
 import CustomersPage from './pages/customers/CustomersPage';
+// Supplier Management
 import SuppliersPage from './pages/suppliers/SuppliersPage';
+// Expenses Management
 import ExpensesPage from './pages/expenses/ExpensesPage';
+// Finance Management
 import FinancePage from './pages/finance/FinancePage';
+
+// Reports
 import ReportsPage from './pages/reports/ReportsPage';
+
+// Settings
 import SettingsPage from './pages/settings/SettingsPage';
 
 
@@ -57,6 +74,8 @@ function App() {
         <Route path="/item" element={<ItemPage onBackToMain={goToMainPanel} />} />
         <Route path="/item/add_item" element={<AddItemPage />} />
         <Route path="/item/add_category" element={<AddCategoryPage />} />
+        <Route path="/item/edit_item" element={<EditItemPage />} />
+        <Route path="/item/category/edit_category" element={<EditCategory />} />
         <Route path="/item/item_list" element={<ItemListPage />} />
         <Route path="/item/category_list" element={<CategoryListPage />} />
         <Route path="/item/importItem" element={<ImportItem />} />

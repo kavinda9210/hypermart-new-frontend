@@ -37,6 +37,9 @@ function ItemPage({ onBackToMain, onAddNewItem, onAddNewCategory, onItemList }) 
     e.preventDefault();
     navigate('/item/generate_qr_code');
   };
+
+  
+  
   
 
 

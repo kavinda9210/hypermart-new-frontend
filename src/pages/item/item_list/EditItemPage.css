@@ -1,0 +1,72 @@
+/* EditItemPage styles */
+.edit-item-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+.edit-item-form .form-row {
+  display: grid;
+  gap: 1.5rem;
+  margin-bottom: 1.5rem;
+}
+@media (min-width: 768px) {
+  .edit-item-form .form-row {
+    grid-template-columns: repeat(4, 1fr);
+  }
+  .edit-item-form .form-row.full-width-row {
+    grid-template-columns: 1fr;
+  }
+}
+.edit-item-form .full-width-description {
+  grid-column: 1 / -1;
+}
+.edit-item-form label {
+  font-weight: 500;
+  margin-bottom: 0.5rem;
+  color: #222;
+}
+.edit-item-form input,
+.edit-item-form select,
+.edit-item-form textarea {
+  width: 100%;
+  padding: 0.5rem 0.75rem;
+  border-radius: 0.5rem;
+  border: 1px solid #ccc;
+  font-size: 1rem;
+  background: #f9f9f9;
+}
+.edit-item-form input[disabled],
+.edit-item-form input[readonly] {
+  background: #e5e7eb;
+  color: #888;
+}
+.edit-item-form .image-preview {
+  width: 100px;
+  height: 70px;
+  object-fit: cover;
+  border-radius: 0.5rem;
+  border: 1px solid #ccc;
+  margin-bottom: 0.5rem;
+}
+.edit-item-form .form-actions {
+  display: flex;
+  justify-content: center;
+  gap: 1.5rem;
+  margin-top: 2rem;
+}
+.edit-item-form .form-actions button {
+  padding: 0.75rem 2rem;
+  border-radius: 0.5rem;
+  font-size: 1rem;
+  font-weight: 600;
+  border: none;
+  cursor: pointer;
+}
+.edit-item-form .form-actions .update-btn {
+  background: #029ED9;
+  color: #fff;
+}
+.edit-item-form .form-actions .cancel-btn {
+  background: #e3342f;
+  color: #fff;
+}

@@ -1,4 +1,5 @@
 import React, { useState, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import Layout from '../../../components/Layout';
 
 const initialCategories = [
@@ -17,6 +18,7 @@ const allColumns = [
 ];
 
 const CategoryListPage = () => {
+  const navigate = useNavigate();
   const [categories] = useState(initialCategories);
   const [search, setSearch] = useState('');
   const [entries, setEntries] = useState(30);
@@ -34,6 +36,11 @@ const CategoryListPage = () => {
     setVisibleCols((prev) =>
       prev.includes(key) ? prev.filter((col) => col !== key) : [...prev, key]
     );
+  };
+
+  const handleEditCategory = (e) => {
+    e.preventDefault();
+    navigate('/item/category/edit_category');
   };
 
   return (
@@ -196,7 +203,7 @@ const CategoryListPage = () => {
                       )}
                       {visibleCols.includes('manage') && (
                         <td className="px-4 py-2">
-                          <button className="px-2 py-1 border-2 rounded-lg">Edit</button>
+                          <button onClick={handleEditCategory} className="px-2 py-1 border-2 rounded-lg">Edit</button>
                           <button className="hidden px-2 py-1 text-white bg-red-600 border-2 rounded-lg ml-2">Delete</button>
                         </td>
                       )}

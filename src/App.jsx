@@ -33,8 +33,30 @@ import DueAmount from './pages/sales/dueAmount/DueAmount';
 
 // User Management
 import UsersPage from './pages/users/UsersPage';
+import AddUsers from './pages/users/add_users/AddUsers';
+import EditUsers from './pages/users/edit_users/EditUsers';
+import UserList from './pages/users/user_list/UserList';
+import AddRole from './pages/users/add_role/AddRole';
+import EditRole from './pages/users/edit_role/EditRole';
+import RoleList from './pages/users/role_list/RoleList';
+import AddPermission from './pages/users/add_permission/AddPermission';
+import EditPermission from './pages/users/edit_permission/EditPermission';
+import PermissionList from './pages/users/permission_list/PermissionList';
+
+  
+
 // Customer Management
 import CustomersPage from './pages/customers/CustomersPage';
+// import AddCustomer from './pages/customers/add_customer/AddCustomer';
+// import CustomerList from './pages/customers/customer_list/CustomerList';
+// import EditCustomer from './pages/customers/edit_customer/EditCustomer';
+// import Transactions from './pages/customers/transactions/Transactions';
+// import customerTransctions from './pages/customers/transactions/Transactions';
+// import TransactionHistory from './pages/customers/transaction_history/TransactionHistory';
+// import transactionLog from './pages/customers/transaction-log/TransactionLog ';
+// import BalanceTransactionLog  from './pages/customers/balance_transaction_log/BalanceTransactionLog'; 
+
+
 // Supplier Management
 import SuppliersPage from './pages/suppliers/SuppliersPage';
 // Expenses Management
@@ -113,8 +135,18 @@ function App() {
         
         <Route path="sales/due_amount" element={<DueAmount onBackToMain={goToMainPanel} />} />
 
-
+          {/* User Management */}
         <Route path="/users/users" element={<UsersPage onBackToMain={goToMainPanel} />} />
+        <Route path="/users/add_users" element={<AddUsers onBackToMain={goToMainPanel} />} />
+        <Route path="/users/edit_users" element={<EditUsers onBackToMain={goToMainPanel} />} />
+        <Route path="/users/user_list" element={<UserList onBackToMain={goToMainPanel} />} />
+        <Route path="/users/role_list" element={<RoleList onBackToMain={goToMainPanel} />} />
+        <Route path="/users/add_role" element={<AddRole onBackToMain={goToMainPanel} />} />
+        <Route path="/users/edit_role" element={<EditRole onBackToMain={goToMainPanel} />} />
+        <Route path="/users/permission_list" element={<PermissionList onBackToMain={goToMainPanel} />} />
+        <Route path="/users/add_permission" element={<AddPermission onBackToMain={goToMainPanel} />} />
+        <Route path="/users/edit_permission" element={<EditPermission onBackToMain={goToMainPanel} />} />
+
         <Route path="/customers/customers" element={<CustomersPage onBackToMain={goToMainPanel} />} />
         <Route path="/suppliers/suppliers" element={<SuppliersPage onBackToMain={goToMainPanel} />} />
         <Route path="/expenses/expenses" element={<ExpensesPage onBackToMain={goToMainPanel} />} />

@@ -1,7 +1,12 @@
-
-import React from 'react';
+import React, { useState, useRef } from 'react';
+import jsPDF from 'jspdf';
+import 'jspdf-autotable';
+import autoTable from 'jspdf-autotable';
+import * as XLSX from 'xlsx';
 import Layout from '../../components/Layout';
 import './Stock.css';
+import { useNavigate } from 'react-router-dom'; // <-- Add this import
+
 
 const stockRows = [
   { id: 1, code: '1001', name: 'test', category: 'sample category', qty: 10000, unit: 'Pieces' },
@@ -12,9 +17,109 @@ const stockRows = [
 ];
 
 const Stock = () => {
+  const [showColumnsPopover, setShowColumnsPopover] = useState(false);
+  const tableRef = useRef();
+
+  // Copy table data to clipboard (skip Manage column)
+  const handleCopy = () => {
+    const table = tableRef.current;
+    let data = '';
+    for (let i = 0; i < table.rows.length; i++) {
+      let row = table.rows[i];
+      let rowData = [];
+      for (let j = 0; j < row.cells.length - 1; j++) {
+        rowData.push(row.cells[j].innerText.trim());
+      }
+      data += rowData.join('\t') + '\n';
+    }
+    navigator.clipboard.writeText(data).then(() => {
+      alert('Table data copied to clipboard in a structured format!');
+    }).catch(err => {
+      alert('Failed to copy table data.');
+    });
+  };
+
+  // Export table to CSV (skip Manage column)
+  const handleExportCSV = () => {
+    const table = tableRef.current;
+    let csvContent = '';
+    for (let i = 0; i < table.rows.length; i++) {
+      let row = table.rows[i];
+      let rowData = [];
+      for (let j = 0; j < row.cells.length - 1; j++) {
+        rowData.push('"' + row.cells[j].innerText.replace(/"/g, '""') + '"');
+      }
+      csvContent += rowData.join(',') + '\n';
+    }
+    const blob = new Blob([csvContent], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = 'stockTable.csv';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  // Export table to Excel (skip Manage column)
+  const handleExportExcel = () => {
+    const table = tableRef.current.cloneNode(true);
+    const rows = table.rows;
+    for (let i = 0; i < rows.length; i++) {
+      rows[i].deleteCell(-1);
+    }
+    const worksheet = XLSX.utils.table_to_sheet(table);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'stockTable');
+    XLSX.writeFile(workbook, 'stockTable.xlsx');
+  };
+
+  // Export table to PDF (skip Manage column)
+  const handleExportPDF = () => {
+    const table = tableRef.current;
+    const rows = [];
+    const tableRows = table.querySelectorAll('tr');
+    let manageColumnIndex = -1;
+    const headerCells = tableRows[0].querySelectorAll('th');
+    headerCells.forEach((cell, index) => {
+      if (cell.innerText.toLowerCase() === 'manage') {
+        manageColumnIndex = index;
+      }
+    });
+    tableRows.forEach(row => {
+      const cols = row.querySelectorAll('td, th');
+      const rowData = [];
+      cols.forEach((col, index) => {
+        if (index !== manageColumnIndex) {
+          rowData.push(col.innerText);
+        }
+      });
+      if (rowData.length > 0) {
+        rows.push(rowData);
+      }
+    });
+    const doc = new jsPDF();
+    autoTable(doc, { head: [rows[0]], body: rows.slice(1) });
+    doc.save('stockTable.pdf');
+  };
+
+  const navigate = useNavigate();
+
+  const handleAddStock = (e) => {
+    e.preventDefault();
+    navigate('/stock/update_stock');
+  };
+
+  const handleViewRelatedStock = (e) => {   
+    e.preventDefault();
+    navigate('/stock/view_related_stock');
+ };  
+    
+
+
   return (
     <Layout>
-      <div className="h-[95vh] max-lg:h-[95vh] flex flex-col grow bg-white">
+      <div className="h-[95vh] max-lg:h-[95vh] flex flex-col grow bg-white" onClick={() => showColumnsPopover && setShowColumnsPopover(false)}>
         {/* Breadcrumbs and controls */}
         <div className="px-12 py-5 max-sm:px-6">
           <nav className="flex max-md:flex-col max-md:w-full" aria-label="Breadcrumb">
@@ -36,13 +141,51 @@ const Stock = () => {
                 </div>
               </li>
             </ol>
-            {/* Buttons */}
-            <div className="flex items-center justify-end w-full gap-2 px-6 py-3 max-sm:px-6 max-md:flex-wrap max-md:gap-2 max-md:justify-center">
-              <button className="px-3 py-2 text-xs text-white bg-[#3c8c2c] rounded-lg max-sm:px-2 max-sm:py-1">Copy</button>
-              <button className="px-3 py-2 text-xs text-white bg-[#3c8c2c] rounded-lg max-sm:px-2 max-sm:py-1">CSV</button>
-              <button className="px-3 py-2 text-xs text-white bg-[#3c8c2c] rounded-lg max-sm:px-2 max-sm:py-1">Excel</button>
-              <button className="px-3 py-2 text-xs text-white bg-[#3c8c2c] rounded-lg max-sm:px-2 max-sm:py-1">PDF</button>
-              <button className="px-3 py-2 text-xs text-white bg-[#3c8c2c] rounded-lg">Column Visibility</button>
+            {/* Buttons - match HTML, UI only */}
+            <div className="flex items-center justify-end w-full gap-2 px-6 py-3 max-sm:px-6 max-md:flex-wrap max-md:gap-2 max-md:justify-center relative">
+              <button className="px-3 py-2 text-xs text-white bg-[#3c8c2c] rounded-lg max-sm:px-2 max-sm:py-1" onClick={handleCopy}>Copy</button>
+              <button className="px-3 py-2 text-xs text-white bg-[#3c8c2c] rounded-lg max-sm:px-2 max-sm:py-1" onClick={handleExportCSV}>CSV</button>
+              <button className="px-3 py-2 text-xs text-white bg-[#3c8c2c] rounded-lg max-sm:px-2 max-sm:py-1" onClick={handleExportExcel}>Excel</button>
+              <button className="px-3 py-2 text-xs text-white bg-[#3c8c2c] rounded-lg max-sm:px-2 max-sm:py-1" onClick={handleExportPDF}>PDF</button>
+              {/* Column Visibility Popover Trigger */}
+              <button
+                type="button"
+                className="px-3 py-2 text-xs text-white bg-[#3c8c2c] rounded-lg"
+                onClick={e => { e.stopPropagation(); setShowColumnsPopover(v => !v); }}
+              >
+                Column Visibility
+              </button>
+              {/* Popover UI (UI only, no logic) */}
+              {showColumnsPopover && (
+                <div
+                  className="absolute z-10 top-12 right-0 inline-block text-sm text-gray-500 bg-white border border-gray-200 rounded-lg shadow-sm w-fit"
+                  style={{ minWidth: 180 }}
+                  onClick={e => e.stopPropagation()}
+                >
+                  <ul className="flex flex-col w-full text-sm font-medium text-gray-900 bg-white border border-gray-200 rounded-lg">
+                    <li>
+                      <input id="filter_item_code" type="checkbox" checked readOnly className="hidden peer" />
+                      <label htmlFor="filter_item_code" className="flex w-full px-4 py-2 border-b border-gray-200 select-none peer-checked:bg-blue-300 cursor-pointer"> Item Code </label>
+                    </li>
+                    <li>
+                      <input id="filter_item_name" type="checkbox" checked readOnly className="hidden peer" />
+                      <label htmlFor="filter_item_name" className="flex w-full px-4 py-2 border-b border-gray-200 select-none peer-checked:bg-blue-300 cursor-pointer"> Item Name </label>
+                    </li>
+                    <li>
+                      <input id="filter_category" type="checkbox" checked readOnly className="hidden peer" />
+                      <label htmlFor="filter_category" className="flex w-full px-4 py-2 border-b border-gray-200 select-none peer-checked:bg-blue-300 cursor-pointer"> Category </label>
+                    </li>
+                    <li>
+                      <input id="filter_quantity" type="checkbox" checked readOnly className="hidden peer" />
+                      <label htmlFor="filter_quantity" className="flex w-full px-4 py-2 border-b border-gray-200 select-none peer-checked:bg-blue-300 cursor-pointer"> Quantity </label>
+                    </li>
+                    <li>
+                      <input id="filter_manage" type="checkbox" checked readOnly className="hidden peer" />
+                      <label htmlFor="filter_manage" className="flex w-full px-4 py-2 rounded-b-lg select-none peer-checked:bg-blue-300 cursor-pointer"> Manage </label>
+                    </li>
+                  </ul>
+                </div>
+              )}
             </div>
           </nav>
         </div>
@@ -74,7 +217,7 @@ const Stock = () => {
         {/* Table */}
         <div className="flex flex-col flex-grow px-12 py-5 overflow-y-auto bg-white max-sm:px-6 max-lg:min-h-full">
           <div className="relative overflow-x-auto">
-            <table className="w-full text-sm text-left text-gray-500 border-collapse rtl:text-right">
+            <table ref={tableRef} id="stockTable" className="w-full text-sm text-left text-gray-500 border-collapse rtl:text-right">
               <thead className="text-xs text-white uppercase bg-[#3c8c2c]">
                 <tr>
                   <th className="px-4 py-2 rounded-tl-lg">#</th>
@@ -97,8 +240,8 @@ const Stock = () => {
                     <td className="px-4 py-2">{row.unit}</td>
                     <td className="px-4 py-2">
                       <div className="flex flex-wrap gap-3">
-                        <button className="p-2 border rounded-md bg-blue-100">Add Stock</button>
-                        <button className="p-2 border rounded-md bg-green-100">View Related Stocks</button>
+                        <button onClick={handleAddStock} className="p-2 border rounded-md bg-blue-100">Add Stock</button>
+                        <button onClick={handleViewRelatedStock} className="p-2 border rounded-md bg-green-100">View Related Stocks</button>
                       </div>
                     </td>
                   </tr>

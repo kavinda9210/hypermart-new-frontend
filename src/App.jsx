@@ -19,9 +19,13 @@ import ExportPanel from './pages/item/ExportPanel/ExportPanel';
 
 // Stock Management
 import Stock from './pages/stock/Stock';
+import UpdateStock from './pages/stock/update_stock/UpdateStock';
+import ViewRelatedStock from './pages/stock/view_related_stock/ViewRelatedStock';
 // Sales Management
 import SalesPage from './pages/sales/SalesPage';
 
+// Due Amount
+import DueAmount from './pages/sales/dueAmount/DueAmount';
 
 // User Management
 import UsersPage from './pages/users/UsersPage';
@@ -36,7 +40,7 @@ import FinancePage from './pages/finance/FinancePage';
 
 // Reports
 import ReportsPage from './pages/reports/ReportsPage';
-
+import StockReport from './pages/reports/stock_report/StockReport';
 // Settings
 import SettingsPage from './pages/settings/SettingsPage';
 
@@ -61,12 +65,14 @@ function App() {
               onExportPanel={() => navigate('/item/export_panel')}
               onStock={() => navigate('/stock/stock')}
               onOpenSales={() => navigate('/sales/sales')}
+              onDueAmount={() => navigate('sales/due_amount')}
               onOpenUsers={() => navigate('/users/users')}
               onOpenCustomers={() => navigate('/customers/customers')}
               onOpenSuppliers={() => navigate('/suppliers/suppliers')}
               onOpenExpenses={() => navigate('/expenses/expenses')}
               onOpenFinance={() => navigate('/finance')}
               onOpenReports={() => navigate('/reports/reports')}
+              onOpenStockReport={() => navigate('reports/stock_report')}
               onOpenSettings={() => navigate('/settings/settings')}
             />
           }
@@ -92,6 +98,10 @@ function App() {
 
           {/* Stock Management */}
         <Route path="/stock/stock" element={<Stock onBackToMain={goToMainPanel} />} />
+        <Route path="/stock/update_stock" element={<UpdateStock onBackToMain={goToMainPanel} />} />
+        <Route path="/stock/view_related_stock" element={<ViewRelatedStock onBackToMain={goToMainPanel} />} />
+        
+        <Route path="sales/due_amount" element={<DueAmount onBackToMain={goToMainPanel} />} />
 
 
         <Route path="/users/users" element={<UsersPage onBackToMain={goToMainPanel} />} />
@@ -100,6 +110,7 @@ function App() {
         <Route path="/expenses/expenses" element={<ExpensesPage onBackToMain={goToMainPanel} />} />
         <Route path="/finance" element={<FinancePage onBackToMain={goToMainPanel} />} />
         <Route path="/reports/reports" element={<ReportsPage onBackToMain={goToMainPanel} />} />
+        <Route path="/reports/stock_report" element={<StockReport onBackToMain={goToMainPanel} />} />
         <Route path="/settings/settings" element={<SettingsPage onBackToMain={goToMainPanel} />} />
 
         <Route path="*" element={<Navigate to="/dashboard" replace />} />

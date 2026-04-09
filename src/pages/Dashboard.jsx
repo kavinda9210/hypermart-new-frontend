@@ -1,6 +1,7 @@
 import './Dashboard.css';
 import Header from '../components/Header';
 import Footer from '../components/Footer';
+import DueAmount from './sales/dueAmount/DueAmount';
 
 const panelItems = [
   {
@@ -42,7 +43,7 @@ const panelItems = [
   },
   {
     label: 'Due Amount',
-    href: ' /sales/dueAmount',
+    href: ' sales/due_amount',
     icon: ' /images/main-panel/btn-icons/billing.svg',
     alt: 'Due Amount',
   },
@@ -89,7 +90,7 @@ const panelItems = [
   },
   {
     label: 'Stock Report',
-    href: ' /reports/stock',
+    href: ' /reports/stock_report',
     icon: ' /images/main-panel/btn-icons/ItemStockReport.png',
     alt: 'Stock Report',
   },
@@ -101,6 +102,7 @@ function Dashboard({
   onOpenItem,
   onExportPanel,
   onStock,
+  onDueAmount,
   onOpenSales,
   onOpenUsers,
   onOpenCustomers,
@@ -108,12 +110,14 @@ function Dashboard({
   onOpenExpenses,
   onOpenFinance,
   onOpenReports,
+  onStockReports,
   onOpenSettings,
 }) {
   const pageOpeners = {
     Items: onOpenItem,
     Stock: onStock,
     Sales: onOpenSales,
+    DueAmount: onDueAmount,
     Users: onOpenUsers,
     Customer: onOpenCustomers,
     Suppliers: onOpenSuppliers,
@@ -122,6 +126,7 @@ function Dashboard({
     Reports: onOpenReports,
     Settings: onOpenSettings,
     'Export Items': onExportPanel,
+    'Stock Reports': onStockReports,
   };
 
   return (

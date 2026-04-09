@@ -1,12 +1,12 @@
 import './UsersPage.css';
-import Footer from '../../components/Footer';
+import Layout from '../../components/Layout';
 
 function UsersPage() {
   return (
-    <>
+    <Layout>
       <div>Users Page (Legacy module removed)</div>
-      <Footer />
-    </>
+    </Layout>
+    
   );
 }
 

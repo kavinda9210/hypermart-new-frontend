@@ -15,19 +15,23 @@ function FinancePage() {
   return (
     <Layout onBackToMain={handleGoToDashboard}>
       <div className="flex flex-col flex-grow bg-[#f6f9ff]">
-        <div className="w-full px-4 py-3 md:px-12 md:py-5">
+        <div className="w-full px-12 py-5 max-sm:px-6">
           <nav className="flex" aria-label="Breadcrumb">
             <ol className="inline-flex items-center space-x-1 md:space-x-2 rtl:space-x-reverse">
               <li className="inline-flex items-center">
-                <button type="button" onClick={handleGoToDashboard} className="inline-flex items-center text-sm font-medium text-gray-700 hover:text-blue-600 bg-transparent border-none p-0" style={{all: 'unset'}}>
-                  <svg className="w-3 h-3 mr-2.5" aria-hidden="true" fill="currentColor" viewBox="0 0 20 20"><path d="M10 2a1 1 0 01.832.445l7 10A1 1 0 0117 14H3a1 1 0 01-.832-1.555l7-10A1 1 0 0110 2zm0 2.236L4.618 12h10.764L10 4.236z" /></svg>
-                  Dashboard
-                </button>
+                <p className="inline-flex items-center text-sm font-medium text-gray-700">
+                  <svg className="w-3 h-3 me-2.5" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 20 20">
+                    <path d="m19.707 9.293-2-2-7-7a1 1 0 0 0-1.414 0l-7 7-2 2a1 1 0 0 0 1.414 1.414L2 10.414V18a2 2 0 0 0 2 2h3a1 1 0 0 0 1-1v-4a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v4a1 1 0 0 0 1 1h3a2 2 0 0 0 2-2v-7.586l.293.293a1 1 0 0 0 1.414-1.414Z" />
+                  </svg>
+                  Main Panel
+                </p>
               </li>
               <li aria-current="page">
                 <div className="flex items-center">
-                  <svg className="w-3 h-3 text-gray-400 mx-1" aria-hidden="true" fill="currentColor" viewBox="0 0 20 20"><path d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" /></svg>
-                  <span className="ml-1 text-sm font-medium text-gray-500 md:ml-2">Finance</span>
+                  <svg className="w-3 h-3 mx-1 text-gray-400 rtl:rotate-180" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 6 10">
+                    <path stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="m1 9 4-4-4-4" />
+                  </svg>
+                  <p className="text-sm font-medium text-gray-700 ms-1 md:ms-2">Finance</p>
                 </div>
               </li>
             </ol>

@@ -1,0 +1,36 @@
+body,
+body * {
+  font-family: Helvetica, Arial, sans-serif;
+}
+
+nav[aria-label='Breadcrumb'] {
+  width: 100%;
+}
+
+nav[aria-label='Breadcrumb'] > ol {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.25rem 0.5rem;
+}
+
+nav[aria-label='Breadcrumb'] li {
+  display: inline-flex;
+  align-items: center;
+  min-width: 0;
+}
+
+nav[aria-label='Breadcrumb'] p {
+  display: inline-flex;
+  align-items: center;
+  min-width: 0;
+  line-height: 1.4;
+}
+
+nav[aria-label='Breadcrumb'] svg {
+  flex-shrink: 0;
+}
+
+nav[aria-label='Breadcrumb'] .inline-flex {
+  min-width: 0;
+}

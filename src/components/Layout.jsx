@@ -3,13 +3,28 @@ import { useNavigate } from 'react-router-dom';
 import Header from '../components/Header';
 import Footer from '../components/Footer';
 
-const Layout = ({ children, onBackToMain }) => {
+const Layout = ({
+  children,
+  onBackToMain,
+  showFullscreen = false,
+  onToggleFullscreen,
+  showMainPanelButton = true,
+  showPosButton = true,
+  showLogo,
+}) => {
   const navigate = useNavigate();
   const handleBackToMain = onBackToMain || (() => navigate('/dashboard'));
 
   return (
     <div className="dashbord-page min-h-dvh max-lg:h-fit flex flex-col h-dvh">
-      <Header onBackToMain={handleBackToMain} />
+      <Header
+        onBackToMain={handleBackToMain}
+        showFullscreen={showFullscreen}
+        onToggleFullscreen={onToggleFullscreen}
+        showMainPanelButton={showMainPanelButton}
+        showPosButton={showPosButton}
+        showLogo={showLogo}
+      />
       <div className="flex-grow flex flex-col">
         {children}
       </div>

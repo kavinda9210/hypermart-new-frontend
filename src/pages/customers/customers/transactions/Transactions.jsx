@@ -1,8 +1,12 @@
 import React from 'react'
+import Layout from '../../../../components/Layout';
+import { useNavigate } from 'react-router-dom';
 
 const Transactions = () => {
   return (
-    <div>Transactions</div>
+    <Layout>
+      <div>Transactions</div>
+    </Layout>
   )
 }
 

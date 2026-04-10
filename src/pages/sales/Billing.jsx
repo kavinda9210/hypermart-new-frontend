@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react';
-import Header from '../../components/Header';
 import './Billing.css';
-import Footer from '../../components/Footer';
+import Layout from '../../components/Layout';
 
 function Billing({ onBackToMain }) {
   const paymentSourceOptions = ['Cash Book', 'Cash', 'Card', 'Cheque', 'Credit', 'Bank Transfer'];
@@ -168,9 +167,8 @@ function Billing({ onBackToMain }) {
   }, []);
 
   return (
-    <>
+    <Layout onBackToMain={onBackToMain} showFullscreen onToggleFullscreen={handleToggleFullscreen}>
       <div className="billing-page h-dvh max-lg:h-fit">
-        <Header onBackToMain={onBackToMain} showFullscreen onToggleFullscreen={handleToggleFullscreen} />
 
         <div className="h-[90%] flex flex-col">
           <div className="px-12 py-5 max-sm:px-6">
@@ -670,8 +668,7 @@ function Billing({ onBackToMain }) {
           </div>
         )}
       </div>
-      <Footer />
-    </>
+    </Layout>
   );
 }
 

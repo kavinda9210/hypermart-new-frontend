@@ -1,7 +1,6 @@
 import './Dashboard.css';
-import Header from '../components/Header';
-import Footer from '../components/Footer';
 import DueAmount from './sales/dueAmount/DueAmount';
+import Layout from '../components/Layout';
 
 const panelItems = [
   {
@@ -130,8 +129,7 @@ function Dashboard({
   };
 
   return (
-    <div className="dashboard-page flex flex-col min-h-screen">
-      <Header showMainPanelButton={false} showPosButton={false} />
+    <Layout showMainPanelButton={false} showPosButton={false}>
       <main
         className="flex items-center justify-center flex-grow py-8"
         style={{
@@ -244,8 +242,7 @@ function Dashboard({
           })}
         </div>
       </main>
-      <Footer />
-    </div>
+    </Layout>
   );
 }
 

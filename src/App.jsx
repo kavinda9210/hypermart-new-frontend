@@ -47,8 +47,9 @@ import PermissionList from './pages/users/permission_list/PermissionList';
 
 // Customer Management
 import CustomersPage from './pages/customers/CustomersPage';
-// import AddCustomer from './pages/customers/add_customer/AddCustomer';
-// import CustomerList from './pages/customers/customer_list/CustomerList';
+import AddCustomer from './pages/customers/add_customer/AddCustomer';
+import CustomerList from './pages/customers/customer_list/CustomerList';
+import Transactions from './pages/customers/customers/transactions/Transactions';
 // import EditCustomer from './pages/customers/edit_customer/EditCustomer';
 // import Transactions from './pages/customers/transactions/Transactions';
 // import customerTransctions from './pages/customers/transactions/Transactions';
@@ -59,16 +60,46 @@ import CustomersPage from './pages/customers/CustomersPage';
 
 // Supplier Management
 import SuppliersPage from './pages/suppliers/SuppliersPage';
+import AddSupplier from './pages/suppliers/add_supplier/AddSupplier';
+import SupplierList from './pages/suppliers/supplier_list/SupplierList';
+import SupplierInvoice from './pages/suppliers/supplier_invoice/SupplierSInvoice';
+import SupplierCheque from './pages/suppliers/supplier_cheque/SupplierCheque';
+import TransactionHistory from './pages/suppliers/transactions/TransactionHistory';
+
+
 // Expenses Management
 import ExpensesPage from './pages/expenses/ExpensesPage';
+import ExpensesList from './pages/expenses/expensesList/ExpensesList';
+import ExpensesCategoryList from './pages/expenses/expensesCategoryList/ExpensesCategoryList';
+
+const AddExpense = React.lazy(() => import('./pages/expenses/addExpense/AddExpense'));
+const AddExpenseCategory = React.lazy(() => import('./pages/expenses/addExpenseCategory/AddExpenseCategory'));
+
 // Finance Management
 import FinancePage from './pages/finance/FinancePage';
+// Finance subpages
+import Banks from './pages/finance/banks/Banks';
+import Accounts from './pages/finance/accounts/Accounts';
+import TransactionsFinance from './pages/finance/transactions/Transactions';
+import Ledger from './pages/finance/ledger/Ledger';
+import PaymentModes from './pages/finance/payment-modes/PaymentModes';
+import PaymentMachines from './pages/finance/payment-machines/PaymentMachines';
 
 // Reports
 import ReportsPage from './pages/reports/ReportsPage';
 import StockReport from './pages/reports/stock_report/StockReport';
+import StockLog from './pages/reports/stockLog/StockLog';
+import LoyaltyPointReport from './pages/reports/loyaltyPointReport/LoyaltyPointReport';
+import CustomSummary from './pages/reports/customSummary/CustomSummary';
+import DailySummary from './pages/reports/dailySummary/DailySummary';
+import MonthlySummary from './pages/reports/monthlySummary/MonthlySummary';
+import YearlySummary from './pages/reports/yearlySummary/YearlySummary';
 // Settings
 import SettingsPage from './pages/settings/SettingsPage';
+import SiteSettings from './pages/settings/siteSettings/SiteSettings';
+import ChangePassword from './pages/settings/changePassword/ChangePassword';
+import ChangeSite from './pages/settings/changeSite/ChangeSite';
+import PosMachines from './pages/admin/pos_machines/PosMachines';
 
 
 
@@ -108,13 +139,14 @@ function App() {
           {/* Sales */}
         <Route path="/sales/billing" element={<Billing onBackToMain={goToMainPanel} />} />
         <Route path="/sales/sales" element={<SalesPage onBackToMain={goToMainPanel} />} />
+        <Route path="/sales/salesItems" element={<SalesItem />} />
         <Route path="/sales/sales_item" element={<SalesItem />} />
         <Route path="/sales/return_list_view" element={<ReturnListView />} />
         <Route path="/sales/payment_details" element={<PaymentDetails />} />
 
         {/* Customer Invoice */}
         <Route path="/sales/customer_invoice" element={<CustomerInvoice />} />
-
+        
           {/* Item Management */}
         <Route path="/item" element={<ItemPage onBackToMain={goToMainPanel} />} />
         <Route path="/item/add_item" element={<AddItemPage />} />
@@ -147,13 +179,63 @@ function App() {
         <Route path="/users/add_permission" element={<AddPermission onBackToMain={goToMainPanel} />} />
         <Route path="/users/edit_permission" element={<EditPermission onBackToMain={goToMainPanel} />} />
 
+            {/* Customer Management */}
         <Route path="/customers/customers" element={<CustomersPage onBackToMain={goToMainPanel} />} />
+        <Route path="/customers/add_customer" element={<AddCustomer onBackToMain={goToMainPanel} />} />
+        <Route path="/customers/customer_list" element={<CustomerList onBackToMain={goToMainPanel} />} />
+        <Route path="/customers/transactions" element={<Transactions onBackToMain={goToMainPanel} />} />
+        <Route path="/customers_invoices" element={<CustomerInvoice onBackToMain={goToMainPanel} />} />
+
+        {/* Supplier Management */}
         <Route path="/suppliers/suppliers" element={<SuppliersPage onBackToMain={goToMainPanel} />} />
+        <Route path="/suppliers/add_supplier" element={<AddSupplier onBackToMain={goToMainPanel} />} />
+        <Route path="/suppliers/supplier_list" element={<SupplierList onBackToMain={goToMainPanel} />} />
+        <Route path="/suppliers/supplier_invoice" element={<SupplierInvoice onBackToMain={goToMainPanel} />} />
+        <Route path="/suppliers/supplier_cheque" element={<SupplierCheque onBackToMain={goToMainPanel} />} />
+        <Route path="/suppliers/transactions" element={<TransactionHistory onBackToMain={goToMainPanel} />} />
+
+        {/* Expenses */}
         <Route path="/expenses/expenses" element={<ExpensesPage onBackToMain={goToMainPanel} />} />
+        <Route
+          path="/expenses/addExpense"
+          element={
+            <React.Suspense fallback={null}>
+              <AddExpense onBackToMain={goToMainPanel} />
+            </React.Suspense>
+          }
+        />
+        <Route
+          path="/expenses/addExpenseCategory"
+          element={
+            <React.Suspense fallback={null}>
+              <AddExpenseCategory onBackToMain={goToMainPanel} />
+            </React.Suspense>
+          }
+        />
+        <Route path="/expenses/expensesList" element={<ExpensesList onBackToMain={goToMainPanel} />} />
+        <Route path="/expenses/expensesCategoryList" element={<ExpensesCategoryList onBackToMain={goToMainPanel} />} />
+        {/* Finance Management */}
         <Route path="/finance" element={<FinancePage onBackToMain={goToMainPanel} />} />
+        <Route path="/finance/banks" element={<Banks onBackToMain={goToMainPanel} />} />
+        <Route path="/finance/accounts" element={<Accounts onBackToMain={goToMainPanel} />} />
+        <Route path="/finance/transactions" element={<TransactionsFinance onBackToMain={goToMainPanel} />} />
+        <Route path="/finance/ledger" element={<Ledger onBackToMain={goToMainPanel} />} />
+        <Route path="/finance/payment-modes" element={<PaymentModes onBackToMain={goToMainPanel} />} />
+        <Route path="/finance/payment-machines" element={<PaymentMachines onBackToMain={goToMainPanel} />} />
         <Route path="/reports/reports" element={<ReportsPage onBackToMain={goToMainPanel} />} />
+        <Route path="/reports/stockReports" element={<StockReport onBackToMain={goToMainPanel} />} />
         <Route path="/reports/stock_report" element={<StockReport onBackToMain={goToMainPanel} />} />
+        <Route path="/reports/stockLog" element={<StockLog onBackToMain={goToMainPanel} />} />
+        <Route path="/reports/loyaltyPointReport" element={<LoyaltyPointReport onBackToMain={goToMainPanel} />} />
+        <Route path="/reports/customSummary" element={<CustomSummary onBackToMain={goToMainPanel} />} />
+        <Route path="/reports/dailySummary" element={<DailySummary onBackToMain={goToMainPanel} />} />
+        <Route path="/reports/monthlySummary" element={<MonthlySummary onBackToMain={goToMainPanel} />} />
+        <Route path="/reports/yearlySummary" element={<YearlySummary onBackToMain={goToMainPanel} />} />
         <Route path="/settings/settings" element={<SettingsPage onBackToMain={goToMainPanel} />} />
+        <Route path="/settings/siteSettings" element={<SiteSettings onBackToMain={goToMainPanel} />} />
+        <Route path="/settings/changePassword" element={<ChangePassword onBackToMain={goToMainPanel} />} />
+        <Route path="/settings/changeSite" element={<ChangeSite onBackToMain={goToMainPanel} />} />
+        <Route path="/admin/pos_machines" element={<PosMachines onBackToMain={goToMainPanel} />} />
 
         <Route path="*" element={<Navigate to="/dashboard" replace />} />
       </Routes>

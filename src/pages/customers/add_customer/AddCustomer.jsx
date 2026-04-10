@@ -1,8 +1,16 @@
 import React from 'react'
+import Layout from '../../../components/Layout';
+import { useNavigate } from 'react-router-dom';
+//import './AddCustomer.css';
+
 
 const AddCustomer = () => {
+  const navigate = useNavigate();
+
   return (
-    <div>AddCustomer</div>
+    <Layout>
+      <div>AddCustomer</div>
+    </Layout>
   )
 }
 

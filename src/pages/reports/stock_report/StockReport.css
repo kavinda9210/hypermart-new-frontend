@@ -1,0 +1,16 @@
+/* StockReport.css - Custom styles for StockReport page. Add any additional overrides here if needed. */
+
+/* Example: Center the table if needed */
+.stock-report-container {
+  background: #fff;
+  padding: 2rem;
+  border-radius: 0.5rem;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+}
+
+/* Responsive tweaks */
+@media (max-width: 640px) {
+  .stock-report-container {
+    padding: 0.5rem;
+  }
+}

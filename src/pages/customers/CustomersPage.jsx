@@ -1,7 +1,17 @@
 import './CustomersPage.css';
 import Layout from '../../components/Layout';
+import { useNavigate } from 'react-router-dom';
+
 
 function CustomersPage() {
+  const navigate = useNavigate();
+  const handleAddNewCustomer = () => navigate('/customers/add_customer');
+  const handleCustomerList = () => navigate('/customers/customer_list');
+  // const handleImportCustomers = () => navigate('/customers/import_customers');
+  const handleCustomerTransactions = () => navigate('/customers/transactions');
+  const handleCustomerInvoices = () => navigate('/sales/customer_invoice');
+
+
   return (
     <Layout>
       <div className="flex flex-col flex-grow justify-start items-center bg-white min-h-dvh">
@@ -26,40 +36,37 @@ function CustomersPage() {
         </div>
         {/* Button container */}
         <div className="grid h-full p-6 w-fit place-items-center">
-          <div className="grid grid-cols-3 place-items-center max-[375px]:grid-cols-1 place-content-center [375px]:justify-items-center h-full gap-6 text-white 2xl:scale-[110%]">
-            <a href="#" className="no-underline">
+          <div className="grid grid-cols-2 place-items-center max-[375px]:grid-cols-1 place-content-center [375px]:justify-items-center h-full gap-6 text-white 2xl:scale-[110%]">
+            <button type="button" className="no-underline p-0 bg-transparent border-none" onClick={handleAddNewCustomer} style={{all: 'unset'}}>
               <div className="w-[200px] max-lg:w-[150px] border-2 border-[#1b4f72] h-[200px] max-lg:h-[150px] bg-[#3c8c2c] text-white rounded-lg flex flex-col gap-3 justify-center items-center hover:scale-90 transition-all cursor-pointer">
                 <div className="w-10 h-10" style={{background: "url('https://hypermart-new.onlinesytems.com/images/customers/addNewCustomer.png') no-repeat", backgroundSize: 'cover'}}></div>
                 <p className="text-center max-sm:text-sm">Add New Customer</p>
               </div>
-            </a>
-            <a href="#" className="no-underline">
+            </button>
+            <button type="button" className="no-underline p-0 bg-transparent border-none" onClick={handleCustomerList} style={{all: 'unset'}}>
               <div className="w-[200px] max-lg:w-[150px] border-2 border-[#1b4f72] h-[200px] max-lg:h-[150px] bg-[#3c8c2c] text-white rounded-lg flex flex-col gap-3 justify-center items-center hover:scale-90 transition-all cursor-pointer">
                 <div className="w-20 h-10" style={{background: "url('https://hypermart-new.onlinesytems.com/images/customers/customerList.png') no-repeat", backgroundSize: 'cover'}}></div>
                 <p className="text-center max-sm:text-sm">Customer List</p>
               </div>
-            </a>
-            <a href="#" className="no-underline">
-              <div className="w-[200px] max-lg:w-[150px] border-2 border-[#3c8c2c] h-[200px] max-lg:h-[150px] bg-[#3c8c2c] text-white rounded-lg flex flex-col gap-3 justify-center items-center hover:scale-90 transition-all cursor-pointer">
-                <div className="w-10 h-10" style={{background: "url('https://hypermart-new.onlinesytems.com/images/customers/importCustomer.png') no-repeat", backgroundSize: 'cover'}}></div>
-                <p className="text-center max-sm:text-sm">Import Customers</p>
-              </div>
-            </a>
-            <a href="#" className="no-underline">
-              <div className="w-[200px] max-lg:w-[150px] border-2 border-[#3c8c2c] h-[200px] max-lg:h-[150px] bg-[#3c8c2c] text-white rounded-lg flex flex-col gap-3 justify-center items-center hover:scale-90 transition-all cursor-pointer">
-                <div className="w-10 h-10" style={{background: "url('https://hypermart-new.onlinesytems.com/images/customers/importCustomer.png') no-repeat", backgroundSize: 'cover'}}></div>
+            </button>
+            <button type="button" className="no-underline p-0 bg-transparent border-none" onClick={handleCustomerTransactions} style={{all: 'unset'}}>
+              <div className="w-[200px] max-lg:w-[150px] border-2 border-[#1b4f72] h-[200px] max-lg:h-[150px] bg-[#3c8c2c] text-white rounded-lg flex flex-col gap-3 justify-center items-center hover:scale-90 transition-all cursor-pointer">
+                <div className="w-20 h-10" style={{background: "url('https://hypermart-new.onlinesytems.com/images/customers/customerList.png') no-repeat", backgroundSize: 'cover'}}></div>
                 <p className="text-center max-sm:text-sm">Customer Transactions</p>
               </div>
-            </a>
-            <a href="#" className="no-underline">
-              <div className="w-[200px] max-lg:w-[150px] border-2 border-[#3c8c2c] h-[200px] max-lg:h-[150px] bg-[#3c8c2c] text-white rounded-lg flex flex-col gap-3 justify-center items-center hover:scale-90 transition-all cursor-pointer">
-                <div className="w-10 h-10" style={{background: "url('https://hypermart-new.onlinesytems.com/images/customers/customerList.png') no-repeat", backgroundSize: 'cover'}}></div>
+            </button>
+            <button type="button" className="no-underline p-0 bg-transparent border-none" onClick={handleCustomerInvoices} style={{all: 'unset'}}>
+              <div className="w-[200px] max-lg:w-[150px] border-2 border-[#1b4f72] h-[200px] max-lg:h-[150px] bg-[#3c8c2c] text-white rounded-lg flex flex-col gap-3 justify-center items-center hover:scale-90 transition-all cursor-pointer">
+                <div className="w-20 h-10" style={{background: "url('https://hypermart-new.onlinesytems.com/images/customers/customerList.png') no-repeat", backgroundSize: 'cover'}}></div>
                 <p className="text-center max-sm:text-sm">Customer Invoices</p>
               </div>
-            </a>
+            </button>
           </div>
+                
         </div>
-      </div>
+            
+        </div>
+      
     </Layout>
   );
 }

@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import Layout from '../../../components/Layout';
 import './CustomerInvoice.css';
 
 const mockInvoices = [
@@ -41,6 +42,7 @@ const CustomerInvoice = () => {
   };
 
   return (
+    <Layout>
     <div className="customer-invoice-page flex flex-col h-full">
       {/* Breadcrumb */}
       <div className="w-full px-4 py-5 sm:px-6 lg:px-12">
@@ -275,6 +277,7 @@ const CustomerInvoice = () => {
         </div>
       )}
     </div>
+    </Layout>
   );
 };
 

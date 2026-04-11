@@ -137,7 +137,7 @@ const RoleList = () => {
 
   return (
     <Layout>
-      <div className="h-[90vh] max-lg:h-[92vh] flex flex-col grow overflow-y-hidden">
+      <div className="min-h-[90vh] max-lg:min-h-[92vh] flex flex-col grow">
         {/* Breadcrumbs and controls */}
         <div className="px-12 py-5 max-sm:px-6">
           <div className="flex flex-row items-center w-full flex-nowrap">
@@ -205,7 +205,7 @@ const RoleList = () => {
         </div>
 
         {/* Table */}
-        <div className="flex flex-col flex-grow px-12 py-5 max-sm:px-6 max-lg:min-h-full overflow-y-hidden">
+        <div className="flex flex-col flex-grow px-12 py-5 max-sm:px-6 max-lg:min-h-full overflow-y-auto">
           <span></span>
           <div className="relative overflow-x-auto">
             <table id="RoleTable" className="w-full text-sm text-left text-gray-500 rtl:text-right">

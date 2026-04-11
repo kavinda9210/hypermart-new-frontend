@@ -9,46 +9,46 @@ const monthlySalesData = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
 const amountCards = [
   {
     label: 'Total Sales Amount',
-    icon: ' /images/dash/sa.png',
+    icon: '/images/dash/sa.png',
   },
   {
     label: 'Total Sales Due',
-    icon: ' /images/dash/sd.png',
+    icon: '/images/dash/sd.png',
   },
   {
     label: 'Total Expenses Amount',
-    icon: ' /images/dash/ea.png',
+    icon: '/images/dash/ea.png',
   },
   {
     label: 'Total Payment Received (Sales)',
-    icon: ' /images/dash/sd.png',
+    icon: '/images/dash/sd.png',
   },
   {
     label: 'Today Total Sales',
-    icon: ' /images/dash/sa.png',
+    icon: '/images/dash/sa.png',
   },
   {
     label: 'Today Total Expenses',
-    icon: ' /images/dash/ea.png',
+    icon: '/images/dash/ea.png',
   },
 ];
 
 const summaryCards = [
   {
     label: 'Customers',
-    icon: ' /images/dash/customer.png',
+    icon: '/images/dash/customer.png',
   },
   {
     label: 'Suppliers',
-    icon: ' /images/dash/supplier.png',
+    icon: '/images/dash/supplier.png',
   },
   {
     label: 'Items',
-    icon: ' /images/dash/purchases.png',
+    icon: '/images/dash/purchases.png',
   },
   {
     label: 'Sales Invoice',
-    icon: ' /images/dash/invoice.png',
+    icon: '/images/dash/invoice.png',
   },
 ];
 

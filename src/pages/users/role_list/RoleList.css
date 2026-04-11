@@ -1,7 +1,5 @@
-
-
 html, body {
-    overflow-y: hidden !important;
+	overflow-y: auto !important;
 }
 body, body * {
 	font-family: Helvetica, Arial, sans-serif;

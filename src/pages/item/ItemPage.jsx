@@ -82,12 +82,12 @@ function ItemPage({ onBackToMain, onAddNewItem, onAddNewCategory, onItemList }) 
           <div className="grid w-full grid-cols-1 gap-4 gap-6 p-6 text-white h-fit sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
             {/* Add New Items */}
             <button onClick={handleAddNewItem} className="w-[200px] max-lg:w-[150px] border-2 border-[#1b4f72] h-[200px] max-lg:h-[150px] bg-[#3c8c2c] text-white rounded-lg flex flex-col gap-3 justify-center items-center hover:scale-90 transition-all xl:scalee-[110%] 2xl:scale-[110%] cursor-pointer focus:outline-none">
-              <div className="w-10 h-10" style={{ background: "url(' /images/items/addNewItem.png') no-repeat", backgroundSize: 'cover' }}></div>
+              <div className="w-10 h-10" style={{ background: "url('/images/items/addNewItem.png') no-repeat", backgroundSize: 'cover' }}></div>
               <p className="text-center max-sm:text-sm">Add New Items</p>
             </button>
             {/* Add New Category */}
             <button onClick={handleAddNewCategory} className="w-[200px] max-lg:w-[150px] border-2 border-[#1b4f72] h-[200px] max-lg:h-[150px] bg-[#3c8c2c] text-white rounded-lg flex flex-col gap-3 justify-center items-center hover:scale-90 transition-all xl:scalee-[110%] 2xl:scale-[110%] cursor-pointer focus:outline-none">
-              <div className="w-10 h-10" style={{ background: "url(' /images/items/AddNewCategory.png') no-repeat", backgroundSize: 'cover' }}></div>
+              <div className="w-10 h-10" style={{ background: "url('/images/items/AddNewCategory.png') no-repeat", backgroundSize: 'cover' }}></div>
               <p className="text-center max-sm:text-sm">Add New Category</p>
             </button>
             {/* Items List */}
@@ -95,23 +95,23 @@ function ItemPage({ onBackToMain, onAddNewItem, onAddNewCategory, onItemList }) 
               onClick={handleItemList}
               className="w-[200px] max-lg:w-[150px] h-[200px] max-lg:h-[150px] bg-[#3c8c2c] rounded-lg flex flex-col gap-3 justify-center items-center hover:scale-90 transition-all xl:scalee-[110%] 2xl:scale-[110%] cursor-pointer"
             >
-              <div className="w-10 h-10" style={{ background: "url(' /images/items/itemList.png') no-repeat", backgroundSize: 'cover' }}></div>
+              <div className="w-10 h-10" style={{ background: "url('/images/items/itemList.png') no-repeat", backgroundSize: 'cover' }}></div>
               <p className="text-center max-sm:text-sm">Items List</p>
             </button>
             {/* Category List */}
             <button onClick={handleCategoryList} className="w-[200px] max-lg:w-[150px] h-[200px] max-lg:h-[150px] bg-[#3c8c2c] rounded-lg flex flex-col gap-3 justify-center items-center hover:scale-90 transition-all xl:scalee-[110%] 2xl:scale-[110%] cursor-pointer">
-              <div className="w-10 h-10" style={{ background: "url(' /images/items/CategoryList.png') no-repeat", backgroundSize: 'cover' }}></div>
+              <div className="w-10 h-10" style={{ background: "url('/images/items/CategoryList.png') no-repeat", backgroundSize: 'cover' }}></div>
               <p className="text-center max-sm:text-sm">Category List</p>
             </button>
             {/* Import Item */}
             <button onClick={handleImportItem} className="w-[200px] max-lg:w-[150px] h-[200px] max-lg:h-[150px] bg-[#3c8c2c] rounded-lg flex flex-col gap-3 justify-center items-center hover:scale-90 transition-all xl:scalee-[110%] 2xl:scale-[110%] cursor-pointer">
-              <div className="w-10 h-10" style={{ background: "url(' /images/items/importItems.png') no-repeat", backgroundSize: 'cover' }}></div>
+              <div className="w-10 h-10" style={{ background: "url('/images/items/importItems.png') no-repeat", backgroundSize: 'cover' }}></div>
               <p className="text-center max-sm:text-sm">Import Item</p>
             </button>
             {/* Genarate QR/Barcode */}
             <a  onClick={handleGenerateCode}>
               <div className="w-[200px] max-lg:w-[150px] border-2 border-[#1b4f72] h-[200px] max-lg:h-[150px] bg-[#3c8c2c] text-white rounded-lg flex flex-col gap-3 justify-center items-center hover:scale-90 transition-all xl:scalee-[110%] 2xl:scale-[110%] cursor-pointer">
-                <div className="w-10 h-10" style={{ background: "url(' /images/items/AddNewCategory.png') no-repeat", backgroundSize: 'cover' }}></div>
+                <div className="w-10 h-10" style={{ background: "url('/images/items/AddNewCategory.png') no-repeat", backgroundSize: 'cover' }}></div>
                 <p className="text-center max-sm:text-sm">Genarate QR/Barcode</p>
               </div>
             </a>

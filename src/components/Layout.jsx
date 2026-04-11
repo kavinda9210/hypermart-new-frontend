@@ -16,7 +16,7 @@ const Layout = ({
   const handleBackToMain = onBackToMain || (() => navigate('/dashboard'));
 
   return (
-    <div className="dashbord-page bg-white">
+    <div className="dashbord-page min-h-screen bg-white flex flex-col overflow-x-hidden">
       <Header
         onBackToMain={handleBackToMain}
         showFullscreen={showFullscreen}
@@ -25,7 +25,7 @@ const Layout = ({
         showPosButton={showPosButton}
         showLogo={showLogo}
       />
-      <div>
+      <div className="flex-1 min-h-0">
         {children}
       </div>
       <Footer />

@@ -18,7 +18,7 @@ const Home = () => {
             <div className="p-8 rounded-2xl border-1 border-black/10 shadow-2xl aspect-square flex justify-center items-center">
             <img
               className="object-contain w-full h-full max-h-64"
-              src=" /Company Logo/1774375100_1771770442_Screenshot 2026-02-22 195640.png"
+              src="/images/logo.png"
               alt="logo"
             />
           </div>
@@ -27,7 +27,7 @@ const Home = () => {
           <div className="w-1/2 max-lg:w-full fade-in" style={{ animationDelay: '0.2s' }}>
           <form
             method="POST"
-            action=" /login"
+            action="/login"
             className="bg-slate-800 rounded-2xl shadow-2xl p-8 space-y-6 border border-slate-700"
             onSubmit={handleSubmit}
           >

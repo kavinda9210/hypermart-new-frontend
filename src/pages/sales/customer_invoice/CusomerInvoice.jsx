@@ -4,6 +4,10 @@ import Layout from '../../../components/Layout';
 import './CustomerInvoice.css';
 
 const mockInvoices = [
+
+
+
+  
   {
     id: 3,
     code: '20260410002',
@@ -40,6 +44,17 @@ const CustomerInvoice = () => {
     setShowModal(false);
     setModalInvoice(null);
   };
+
+  const handleCheques = (e) => {
+    e.preventDefault();
+    navigate('/cheques'); 
+  };
+
+  const handleAddInvoice = (e) => {
+    e.preventDefault();
+    navigate('/cheques/create');
+  };
+
 
   return (
     <Layout>
@@ -79,11 +94,11 @@ const CustomerInvoice = () => {
         <div className="flex items-center justify-between mb-6">
           <h1 className="text-2xl font-bold text-gray-900">Customer Invoices (Credit Bills, Debit Bills, VAT Invoices)</h1>
           <div className="flex gap-3">
-            <button className="px-4 py-2 text-white rounded-lg bg-yellow-500 hover:opacity-90 flex items-center gap-2">
+            <button onClick={handleCheques} className="px-4 py-2 text-white rounded-lg bg-yellow-500 hover:opacity-90 flex items-center gap-2">
               <i className="fas fa-money-check"></i>
               View Cheques
             </button>
-            <button className="px-4 py-2 text-white rounded-lg bg-[#3c8c2c] hover:opacity-90 flex items-center gap-2">
+            <button onClick={handleAddInvoice} className="px-4 py-2 text-white rounded-lg bg-[#3c8c2c] hover:opacity-90 flex items-center gap-2">
               <i className="fas fa-plus"></i>
               Add New Invoice
             </button>

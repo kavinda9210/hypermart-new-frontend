@@ -1,9 +1,249 @@
-import React from 'react'
+import React from 'react';
+import './BalanceTransactionLog.css';
 
 const BalanceTransactionLog = () => {
-  return (
-    <div>BalanceTransactionLog</div>
-  )
-}
+  // Loading overlay state (simulate for navigation/form submit)
+  const [loading, setLoading] = React.useState(false);
 
-export default BalanceTransactionLog
+  // Simulate loading overlay for navigation or form submit
+  React.useEffect(() => {
+    const hideLoading = () => setLoading(false);
+    hideLoading();
+    document.addEventListener('visibilitychange', hideLoading);
+    return () => document.removeEventListener('visibilitychange', hideLoading);
+  }, []);
+
+  const showLoading = () => setLoading(true);
+  const handleNav = (url) => {
+    showLoading();
+    setTimeout(() => {
+      setLoading(false);
+      window.location.href = url;
+    }, 800);
+  };
+
+  return (
+    <div className="min-h-dvh max-lg:h-fit flex flex-col h-dvh">
+      {/* Nav */}
+      <div className="nav bg-[#3c8c2c] w-full h-[10%] max-lg:h-[17dvh] py-6 flex justify-between items-center max-md:justify-center max-md:flex-col md:px-14 lg:px-0">
+        <span className="flex items-center gap-3 ml-20 max-lg:ml-0 max-sm:scale-75">
+          <button
+            type="button"
+            onClick={() => window.history.back()}
+            className="rounded-full w-[50px] aspect-square bg-white flex justify-center items-center hover:scale-90 transition-all"
+          >
+            <i className="text-xl text-[#000000] fas fa-arrow-left"></i>
+          </button>
+          <button
+            type="button"
+            onClick={() => handleNav('/dashboard')}
+            className="p-2 text-[#000000] rounded-lg bg-white flex gap-3 justify-center items-center hover:scale-90 transition-all"
+          >
+            <i className="text-xl text-[#000000] fas fa-city"></i>
+            Go to Main Panel
+          </button>
+          <a
+            href="/sales/billing"
+            className="p-2 text-[#000000] rounded-lg bg-white flex gap-3 justify-center items-center hover:scale-90 transition-all"
+          >
+            POS
+          </a>
+        </span>
+        <div className="absolute left-1/2 transform -translate-x-1/2 hidden sm:block">
+          <img
+            src="https://hypermart-new.onlinesytems.com/Company Logo/1774375149_1771770442_Screenshot 2026-02-22 195640.png"
+            alt="Logo"
+            className="h-14 max-sm:h-8 bg-white p-1 rounded-full"
+          />
+        </div>
+        <span className="flex items-center gap-3 mr-20 max-lg:mr-0 max-sm:scale-75">
+          <div className="flex flex-col items-end text-right">
+            <h3 className="text-2xl max-md:text-sm text-[#ffffff]">Good Afternoon!</h3>
+            <h3 className="text-sm text-[#ffffff]">Welcome HYPERMART</h3>
+          </div>
+          <form method="POST" action="https://hypermart-new.onlinesytems.com/logout">
+            <input type="hidden" name="_token" value="w60AGsOgpzTar61Q5IStjmzQHtGFA4bgGu0ewCzn" autoComplete="off" />
+            <button type="submit" className="rounded-full w-[50px] aspect-square bg-white flex justify-center items-center hover:scale-90 transition-all">
+              <i className="text-xl font-bold text-[#000000] fas fa-sign-out-alt"></i>
+            </button>
+          </form>
+        </span>
+      </div>
+
+      {/* Loading Overlay */}
+      {loading && (
+        <div className="loading-overlay">
+          <div className="text-center">
+            <div className="spinner"></div>
+          </div>
+        </div>
+      )}
+
+      <div className="flex flex-col md:h-[90vh]">
+        {/* Breadcrumbs */}
+        <div className="w-full px-4 py-5 sm:px-6 lg:px-12">
+          <nav aria-label="Breadcrumb" className="flex items-center justify-between max-md:flex-col">
+            <ol className="inline-flex items-center space-x-1 md:space-x-2">
+              <li className="inline-flex items-center">
+                <a href="/dashboard" className="inline-flex items-center text-sm font-medium text-gray-700 hover:text-blue-600">
+                  <svg className="w-3 h-3 mr-2.5" fill="currentColor" viewBox="0 0 20 20">
+                    <path d="M10.707 2.293a1 1 0 00-1.414 0l-7 7a1 1 0 001.414 1.414L4 10.414V18a2 2 0 002 2h3a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1h3a2 2 0 002-2v-7.586l.293.293a1 1 0 001.414-1.414l-7-7z" />
+                  </svg>
+                  Main Panel
+                </a>
+              </li>
+              <li>
+                <div className="flex items-center">
+                  <svg className="w-3 h-3 mx-1 text-gray-400" fill="none" viewBox="0 0 6 10">
+                    <path stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="m1 9 4-4-4-4" />
+                  </svg>
+                  <a href="/customers/customers" className="text-sm font-medium text-gray-700 hover:text-blue-600 ms-1 md:ms-2">Customers</a>
+                </div>
+              </li>
+              <li aria-current="page">
+                <div className="flex items-center">
+                  <svg className="w-3 h-3 mx-1 text-gray-400" fill="none" viewBox="0 0 6 10">
+                    <path stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="m1 9 4-4-4-4" />
+                  </svg>
+                  <span className="text-sm font-medium text-gray-500 ms-1 md:ms-2">Customer Balance Transaction Log</span>
+                </div>
+              </li>
+            </ol>
+          </nav>
+        </div>
+
+        {/* Filters */}
+        <div className="px-4 py-4 sm:px-6 lg:px-12">
+          <form className="p-4 bg-white rounded-lg shadow">
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
+              {/* Customer Filter */}
+              <div className="custom-select">
+                <label className="block mb-2 text-sm font-medium text-gray-700">Customer</label>
+                <select name="customer_id" className="w-full px-3 py-2 border border-gray-300 rounded-lg">
+                  <option value="">All Customers</option>
+                  <option value="7db14cc2-3519-4bc1-b281-32562caa3309" selected>BANDULA</option>
+                  <option value="1">Customer</option>
+                </select>
+              </div>
+              {/* Date From */}
+              <div>
+                <label className="block mb-2 text-sm font-medium text-gray-700">From Date</label>
+                <input type="date" name="date_from" className="w-full px-3 py-2 border border-gray-300 rounded-lg" />
+              </div>
+              {/* Date To */}
+              <div>
+                <label className="block mb-2 text-sm font-medium text-gray-700">To Date</label>
+                <input type="date" name="date_to" className="w-full px-3 py-2 border border-gray-300 rounded-lg" />
+              </div>
+              <div className="flex items-end">
+                <button type="submit" className="px-4 py-2 text-white bg-blue-600 rounded-lg hover:bg-blue-700 w-full">Apply Filters</button>
+              </div>
+            </div>
+          </form>
+        </div>
+
+        {/* Log Table & Summary */}
+        <div className="flex-1 px-4 pb-6 md:overflow-auto sm:px-6 lg:px-12">
+          <div className="p-6 bg-white rounded-lg shadow">
+            <h2 className="mb-4 text-xl font-bold text-gray-900">Logs for BANDULA</h2>
+            {/* Summary Cards */}
+            <div className="grid grid-cols-1 gap-4 mb-6 md:grid-cols-2 lg:grid-cols-4">
+              {/* Total Debits Card */}
+              <div className="p-4 border-l-4 border-green-500 rounded-lg shadow-sm bg-green-50">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-xs font-medium text-green-600 uppercase">Total Debits</p>
+                    <p className="mt-1 text-2xl font-bold text-green-700">Rs. 0.00</p>
+                    <p className="mt-1 text-xs text-green-600">0 transactions</p>
+                  </div>
+                  <div className="p-3 bg-green-200 rounded-full">
+                    <svg className="w-6 h-6 text-green-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 14l-7 7m0 0l-7-7m7 7V3"></path>
+                    </svg>
+                  </div>
+                </div>
+              </div>
+              {/* Total Credits Card */}
+              <div className="p-4 border-l-4 border-red-500 rounded-lg shadow-sm bg-red-50">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-xs font-medium text-red-600 uppercase">Total Credits</p>
+                    <p className="mt-1 text-2xl font-bold text-red-700">Rs. 0.00</p>
+                    <p className="mt-1 text-xs text-red-600">0 transactions</p>
+                  </div>
+                  <div className="p-3 bg-red-200 rounded-full">
+                    <svg className="w-6 h-6 text-red-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 10l7-7m0 0l7 7m-7-7v18"></path>
+                    </svg>
+                  </div>
+                </div>
+              </div>
+              {/* Net Balance Card */}
+              <div className="p-4 border-l-4 border-blue-500 rounded-lg shadow-sm bg-blue-50">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-xs font-medium text-blue-600 uppercase">Net Balance</p>
+                    <p className="mt-1 text-2xl font-bold text-blue-700">Debit Rs. 0.00</p>
+                    <p className="mt-1 text-xs text-blue-600">From filtered logs</p>
+                  </div>
+                  <div className="p-3 bg-blue-200 rounded-full">
+                    <svg className="w-6 h-6 text-blue-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"></path>
+                    </svg>
+                  </div>
+                </div>
+              </div>
+              {/* Total Logs Card */}
+              <div className="p-4 border-l-4 border-gray-500 rounded-lg shadow-sm bg-gray-50">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-xs font-medium text-gray-600 uppercase">Total Logs</p>
+                    <p className="mt-1 text-2xl font-bold text-gray-700">0</p>
+                    <p className="mt-1 text-xs text-gray-600">In current filter</p>
+                  </div>
+                  <div className="p-3 bg-gray-200 rounded-full">
+                    <svg className="w-6 h-6 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path>
+                    </svg>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm text-left text-gray-500">
+                <thead className="text-xs text-gray-700 uppercase bg-gray-50">
+                  <tr>
+                    <th className="px-6 py-3">#</th>
+                    <th className="px-6 py-3">Date</th>
+                    <th className="px-6 py-3">Type</th>
+                    <th className="px-6 py-3">Customer</th>
+                    <th className="px-6 py-3">Description</th>
+                    <th className="px-6 py-3 text-right">Debit</th>
+                    <th className="px-6 py-3 text-right">Credit</th>
+                    <th className="px-6 py-3">Performed By</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td colSpan={8} className="px-6 py-8 text-center text-gray-500">
+                      No logs found. Try adjusting your filters.
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            {/* Pagination (empty for now) */}
+            <div className="mt-4"></div>
+          </div>
+        </div>
+      </div>
+
+      <footer className="bg-[#3c8c2c] py-4 text-center text-[#ffffff]">
+        <p>2026 © All Rights Reserved | Hypermart | Designed and Developed by Silicon Radon Networks (Pvt) Ltd</p>
+      </footer>
+    </div>
+  );
+};
+
+export default BalanceTransactionLog;

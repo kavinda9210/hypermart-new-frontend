@@ -49,7 +49,7 @@ import PermissionList from './pages/users/permission_list/PermissionList';
 import CustomersPage from './pages/customers/CustomersPage';
 import AddCustomer from './pages/customers/add_customer/AddCustomer';
 import CustomerList from './pages/customers/customer_list/CustomerList';
-import Transactions from './pages/customers/customers/transactions/Transactions';
+import Transactions from './pages/customers/transactions/Transactions';
 import EditCustomer from './pages/customers/edit_customer/EditCustomer';
 // import Transactions from './pages/customers/transactions/Transactions';
 // import customerTransctions from './pages/customers/transactions/Transactions';
@@ -57,6 +57,9 @@ import CustomerTransactionHistory from './pages/customers/transaction_history/Tr
 // import transactionLog from './pages/customers/transaction-log/TransactionLog ';
 import BalanceTransactionLog  from './pages/customers/balance_transaction_log/BalanceTransactionLog'; 
 
+// Cheques 
+import Cheques from './pages/cheques/Cheques';
+import CreateCheques from './pages/cheques/create/CreateCheques';
 
 // Supplier Management
 import SuppliersPage from './pages/suppliers/SuppliersPage';
@@ -190,6 +193,10 @@ function App() {
         <Route path="/customers/transactions/history" element={<CustomerTransactionHistory onBackToMain={goToMainPanel} />} />
         <Route path="/customers/transaction-log" element={<TransactionLog onBackToMain={goToMainPanel} />} />
         <Route path="/customers/balance-transaction-log" element={<BalanceTransactionLog onBackToMain={goToMainPanel} />} />
+
+        {/* Cheques */}
+        <Route path="/cheques" element={<Cheques onBackToMain={goToMainPanel} />} />
+        <Route path="/cheques/create" element={<CreateCheques onBackToMain={goToMainPanel} />} />
         
         {/* Supplier Management */}
         <Route path="/suppliers/suppliers" element={<SuppliersPage onBackToMain={goToMainPanel} />} />

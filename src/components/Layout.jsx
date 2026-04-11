@@ -6,6 +6,7 @@ import Footer from '../components/Footer';
 const Layout = ({
   children,
   onBackToMain,
+  onPOS,
   showFullscreen = false,
   onToggleFullscreen,
   showMainPanelButton = true,
@@ -14,11 +15,13 @@ const Layout = ({
 }) => {
   const navigate = useNavigate();
   const handleBackToMain = onBackToMain || (() => navigate('/dashboard'));
+  const handlePOS = onPOS || (() => navigate('/sales/billing'));
 
   return (
     <div className="dashbord-page min-h-screen bg-white flex flex-col overflow-x-hidden">
       <Header
         onBackToMain={handleBackToMain}
+        onPOS={handlePOS}
         showFullscreen={showFullscreen}
         onToggleFullscreen={onToggleFullscreen}
         showMainPanelButton={showMainPanelButton}

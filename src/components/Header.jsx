@@ -1,5 +1,6 @@
 function Header({
   onBackToMain,
+  onPOS,
   showFullscreen = false,
   onToggleFullscreen,
   showMainPanelButton = true,
@@ -61,13 +62,12 @@ function Header({
         )}
 
         {showPosButton && (
-          <a
-            href="#"
-            onClick={(e) => e.preventDefault()}
+          <button
+            onClick={onPOS}
             className="p-2 text-[#000000] rounded-lg bg-white flex gap-3 justify-center items-center hover:scale-90 transition-all"
           >
             POS
-          </a>
+          </button>
         )}
       </span>
 

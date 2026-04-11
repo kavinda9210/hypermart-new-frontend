@@ -142,15 +142,20 @@ const CustomerList = () => {
 
   const handleViewTransactions = (e) => {
     e.preventDefault();
-    navigate(`/customers/transactions`);
+    navigate(`/customers/transactions/history`);
   };
 
-  const handleViewTransactionsLog = (customerId) => {
-    window.location.href = `/customers/transaction-log?customer_id=${customerId}`;
+  
+  const handleViewTransactionsLog = (e) => {
+    e.preventDefault();
+    navigate(`/customers/transaction-log`);
   };
 
-  const handleViewBalanceTransactionsLog = (customerId) => {
-    window.location.href = `/customers/balance-transaction-log?customer_id=${customerId}`;
+  
+
+  const handleViewBalanceTransactionsLog = (e) => {
+    e.preventDefault();
+    navigate(`/customers/balance-transaction-log`);
   };
 
   return (
@@ -282,9 +287,9 @@ const CustomerList = () => {
                           ) : (
                             <button type="button" className="px-3 py-1 text-white bg-green-600 rounded" onClick={() => updateCustomerStatus(customer.id, 'enable')}>Enable</button>
                           )}
-                          <button type="button" className="px-3 py-1 border rounded bg-blue-50" onClick={() => handleViewTransactions(customer.id)}>Transactions</button>
-                          <button type="button" className="px-3 py-1 border rounded bg-blue-50" onClick={() => handleViewTransactionsLog(customer.id)}>Transactions Log</button>
-                          <button type="button" className="px-3 py-1 border rounded bg-blue-50" onClick={() => handleViewBalanceTransactionsLog(customer.id)}>Balance Transactions Log</button>
+                          <button type="button" className="px-3 py-1 border rounded bg-blue-50" onClick={handleViewTransactions}>Transactions</button>
+                          <button type="button" className="px-3 py-1 border rounded bg-blue-50" onClick={handleViewTransactionsLog}>Transactions Log</button>
+                          <button type="button" className="px-3 py-1 border rounded bg-blue-50" onClick={handleViewBalanceTransactionsLog}>Balance Transactions Log</button>
                         </td>
                       </tr>
                     ))}

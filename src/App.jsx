@@ -53,9 +53,9 @@ import Transactions from './pages/customers/customers/transactions/Transactions'
 import EditCustomer from './pages/customers/edit_customer/EditCustomer';
 // import Transactions from './pages/customers/transactions/Transactions';
 // import customerTransctions from './pages/customers/transactions/Transactions';
-// import TransactionHistory from './pages/customers/transaction_history/TransactionHistory';
+import TransactionHistory from './pages/customers/transaction_history/TransactionHistory';
 // import transactionLog from './pages/customers/transaction-log/TransactionLog ';
-// import BalanceTransactionLog  from './pages/customers/balance_transaction_log/BalanceTransactionLog'; 
+import BalanceTransactionLog  from './pages/customers/balance_transaction_log/BalanceTransactionLog'; 
 
 
 // Supplier Management
@@ -64,7 +64,7 @@ import AddSupplier from './pages/suppliers/add_supplier/AddSupplier';
 import SupplierList from './pages/suppliers/supplier_list/SupplierList';
 import SupplierInvoice from './pages/suppliers/supplier_invoice/SupplierSInvoice';
 import SupplierCheque from './pages/suppliers/supplier_cheque/SupplierCheque';
-import TransactionHistory from './pages/suppliers/transactions/TransactionHistory';
+import CustomerTransactionHistory from './pages/suppliers/transactions/TransactionHistory';
 
 
 // Expenses Management
@@ -100,6 +100,7 @@ import SiteSettings from './pages/settings/siteSettings/SiteSettings';
 import ChangePassword from './pages/settings/changePassword/ChangePassword';
 import ChangeSite from './pages/settings/changeSite/ChangeSite';
 import PosMachines from './pages/admin/pos_machines/PosMachines';
+import TransactionLog from './pages/customers/transaction-log/TransactionLog';
 
 
 
@@ -186,7 +187,10 @@ function App() {
         <Route path="/customers/customer_list" element={<CustomerList onBackToMain={goToMainPanel} />} />
         <Route path="/customers/transactions" element={<Transactions onBackToMain={goToMainPanel} />} />
         <Route path="/customers_invoices" element={<CustomerInvoice onBackToMain={goToMainPanel} />} />
-
+        <Route path="/customers/transactions/history" element={<CustomerTransactionHistory onBackToMain={goToMainPanel} />} />
+        <Route path="/customers/transaction-log" element={<TransactionLog onBackToMain={goToMainPanel} />} />
+        <Route path="/customers/balance-transaction-log" element={<BalanceTransactionLog onBackToMain={goToMainPanel} />} />
+        
         {/* Supplier Management */}
         <Route path="/suppliers/suppliers" element={<SuppliersPage onBackToMain={goToMainPanel} />} />
         <Route path="/suppliers/add_supplier" element={<AddSupplier onBackToMain={goToMainPanel} />} />
@@ -194,7 +198,7 @@ function App() {
         <Route path="/suppliers/supplier_invoice" element={<SupplierInvoice onBackToMain={goToMainPanel} />} />
         <Route path="/suppliers/supplier_cheque" element={<SupplierCheque onBackToMain={goToMainPanel} />} />
         <Route path="/suppliers/transactions" element={<TransactionHistory onBackToMain={goToMainPanel} />} />
-
+      
         {/* Expenses */}
         <Route path="/expenses/expenses" element={<ExpensesPage onBackToMain={goToMainPanel} />} />
         <Route

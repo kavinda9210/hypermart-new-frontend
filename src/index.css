@@ -3,6 +3,22 @@ body * {
   font-family: Helvetica, Arial, sans-serif;
 }
 
+.fas,
+.fa-solid {
+  font-family: "Font Awesome 5 Free" !important;
+  font-weight: 900 !important;
+}
+
+.far {
+  font-family: "Font Awesome 5 Free" !important;
+  font-weight: 400 !important;
+}
+
+.fab {
+  font-family: "Font Awesome 5 Brands" !important;
+  font-weight: 400 !important;
+}
+
 nav[aria-label='Breadcrumb'] {
   width: 100%;
 }

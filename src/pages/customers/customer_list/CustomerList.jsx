@@ -4,6 +4,7 @@ import '../../../assets/customer-pages.css';
 import * as XLSX from 'xlsx';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import { useNavigate } from 'react-router-dom'; // <-- Add this import
 
 const customerRows = [
   {
@@ -50,6 +51,7 @@ const columns = [
 ];
 
 const CustomerList = () => {
+  const navigate = useNavigate(); // <-- Initialize the navigate function
   const [search, setSearch] = useState('');
   const [entries, setEntries] = useState(30);
   const [showPopover, setShowPopover] = useState(false);
@@ -132,12 +134,15 @@ const CustomerList = () => {
     )));
   };
 
-  const handleEdit = (customerId) => {
-    window.location.href = `/customers/updateCustomer/${customerId}`;
+  const handleEditButton = (e) => {
+    e.preventDefault();
+    navigate(`/customers/updateCustomer/`);
   };
 
-  const handleViewTransactions = (customerId) => {
-    window.location.href = `/customers/transactions/history?customer_id=${customerId}`;
+
+  const handleViewTransactions = (e) => {
+    e.preventDefault();
+    navigate(`/customers/transactions`);
   };
 
   const handleViewTransactionsLog = (customerId) => {
@@ -271,7 +276,7 @@ const CustomerList = () => {
                           </td>
                         ))}
                         <td className="px-4 py-2 flex flex-wrap gap-3">
-                          <button type="button" className="px-3 py-1 border rounded" onClick={() => handleEdit(customer.id)}>Edit</button>
+                          <button type="button" className="px-3 py-1 border rounded" onClick={handleEditButton}>Edit</button>
                           {customer.active ? (
                             <button type="button" className="px-3 py-1 text-white bg-red-600 rounded" onClick={() => updateCustomerStatus(customer.id, 'disable')}>Disable</button>
                           ) : (

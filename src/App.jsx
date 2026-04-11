@@ -50,7 +50,7 @@ import CustomersPage from './pages/customers/CustomersPage';
 import AddCustomer from './pages/customers/add_customer/AddCustomer';
 import CustomerList from './pages/customers/customer_list/CustomerList';
 import Transactions from './pages/customers/customers/transactions/Transactions';
-// import EditCustomer from './pages/customers/edit_customer/EditCustomer';
+import EditCustomer from './pages/customers/edit_customer/EditCustomer';
 // import Transactions from './pages/customers/transactions/Transactions';
 // import customerTransctions from './pages/customers/transactions/Transactions';
 // import TransactionHistory from './pages/customers/transaction_history/TransactionHistory';
@@ -182,6 +182,7 @@ function App() {
             {/* Customer Management */}
         <Route path="/customers/customers" element={<CustomersPage onBackToMain={goToMainPanel} />} />
         <Route path="/customers/add_customer" element={<AddCustomer onBackToMain={goToMainPanel} />} />
+        <Route path="/customers/updateCustomer/" element={<EditCustomer onBackToMain={goToMainPanel} />} />
         <Route path="/customers/customer_list" element={<CustomerList onBackToMain={goToMainPanel} />} />
         <Route path="/customers/transactions" element={<Transactions onBackToMain={goToMainPanel} />} />
         <Route path="/customers_invoices" element={<CustomerInvoice onBackToMain={goToMainPanel} />} />

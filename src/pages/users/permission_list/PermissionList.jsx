@@ -5,6 +5,7 @@ import './PermissionList.css';
 import * as XLSX from 'xlsx';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import { useNavigate } from 'react-router-dom';
 
 const allColumns = [
   { key: 'permission', label: 'Permission' },
@@ -19,6 +20,7 @@ const staticPermissions = [
 ];
 
 const PermissionList = () => {
+  const navigate = useNavigate();
   const [search, setSearch] = useState('');
   const [entries, setEntries] = useState(30);
   const [permissions, setPermissions] = useState(staticPermissions);
@@ -31,8 +33,11 @@ const PermissionList = () => {
     p.permission.toLowerCase().includes(search.toLowerCase())
   ).slice(0, entries);
 
-  const handleEdit = (id) => {
-    alert('Edit permission ' + id);
+  
+
+  const handleEditButton = (e) => {
+    e.preventDefault();
+    navigate(`/users/edit_permission`);
   };
 
   // Copy to clipboard
@@ -222,7 +227,7 @@ const PermissionList = () => {
                     )}
                     {visibleCols.includes('manage') && (
                       <td className="px-4 py-2">
-                        <button className="p-2 border-2 rounded-lg" onClick={() => handleEdit(p.id)}>Edit</button>
+                        <button className="p-2 border-2 rounded-lg" onClick={handleEditButton}>Edit</button>
                         <button className="hidden p-2 text-white bg-red-600 border-2 rounded-lg" disabled>Delete</button>
                       </td>
                     )}

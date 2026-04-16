@@ -1,83 +1,10 @@
 
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import Layout from '../../../components/Layout';
 import './RoleList.css';
 import { exportCopy, exportCSV, exportExcel, exportPDF } from './exportUtils';
-import { useNavigate } from 'react-router-dom'; 
-
-const mockRoles = [
-  {
-    id: 1,
-    role_name: 'admin',
-    salary_type: 'hourly',
-    hourly_wage: '0.00',
-    monthly_salary: '-',
-    permission_count: 80,
-    data: {
-      
-      id: 1,
-      role_name: 'admin',
-      hourly_wage: '0.00',
-      salary_type: 'hourly',
-      monthly_salary: null,
-      daily_rate: null,
-      no_pay_rate: '0.00',
-      allowance: '0.00',
-      ot_included: false,
-      ot_rate: null,
-      double_ot_rate: null,
-      triple_ot_rate: null,
-      epf_enabled: false,
-    },
-  },
-  {
-    id: 2,
-    role_name: 'manager',
-    salary_type: 'hourly',
-    hourly_wage: '0.00',
-    monthly_salary: '-',
-    permission_count: 26,
-    data: {
-      id: 2,
-      role_name: 'manager',
-      hourly_wage: '0.00',
-      salary_type: 'hourly',
-      monthly_salary: null,
-      daily_rate: null,
-      no_pay_rate: '0.00',
-      allowance: '0.00',
-      ot_included: false,
-      ot_rate: null,
-      double_ot_rate: null,
-      triple_ot_rate: null,
-      epf_enabled: false,
-    },
-  },
-  {
-    id: 3,
-    role_name: 'Super Admin',
-    salary_type: 'hourly',
-    hourly_wage: '0.00',
-    monthly_salary: '-',
-    permission_count: 80,
-    data: {
-      id: 3,
-      role_name: 'Super Admin',
-      hourly_wage: '0.00',
-      salary_type: 'hourly',
-      monthly_salary: null,
-      daily_rate: null,
-      no_pay_rate: '0.00',
-      allowance: '0.00',
-      ot_included: false,
-      ot_rate: null,
-      double_ot_rate: null,
-      triple_ot_rate: null,
-      epf_enabled: false,
-    },
-  },
-];
+import { useNavigate } from 'react-router-dom';
 
 const columns = [
   { key: 'id', label: '#' },
@@ -95,10 +22,15 @@ const RoleList = () => {
   const [entries, setEntries] = useState(30);
   const [showModal, setShowModal] = useState(false);
   const [modalRole, setModalRole] = useState(null);
-  const handleManagePermissions = (e) =>{
+  const [roles, setRoles] = useState([]);
+  const [rolesError, setRolesError] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState('');
+
+  const handleManagePermissions = (e) => {
     e.preventDefault();
     navigate('/users/edit_role');
-  }
+  };
 
   // Local state for modal fields (for OT toggle)
   const [modalFields, setModalFields] = useState(null);
@@ -112,27 +44,186 @@ const RoleList = () => {
     manage: true,
   });
 
+  useEffect(() => {
+    const token = localStorage.getItem('token');
+    if (!token) {
+      setRoles([]);
+      return;
+    }
+
+    fetch('/api/users/roles', {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+      .then(async (res) => {
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(data?.error || 'Failed to load roles');
+        return data;
+      })
+      .then((data) => {
+        const list = Array.isArray(data) ? data : (data?.roles || []);
+        setRoles(list);
+        setRolesError('');
+      })
+      .catch((err) => {
+        setRoles([]);
+        setRolesError(err?.message || 'Failed to load roles');
+      });
+  }, []);
+
   const handleSearch = (e) => setSearch(e.target.value);
   const handleEntries = (e) => setEntries(Number(e.target.value) || 30);
   const handleColumnToggle = (key) => {
     setColumnVisibility((prev) => ({ ...prev, [key]: !prev[key] }));
   };
-  const openSalaryModal = (role) => {
+
+  const normalizeRoleForForm = (role) => ({
+    ...role,
+    salary_type: role?.salary_type || 'hourly',
+    ot_included: Boolean(Number(role?.ot_included ?? 0)),
+    epf_enabled: Boolean(Number(role?.epf_enabled ?? 0)),
+  });
+
+  const openSalaryModal = async (role) => {
+    setSaveError('');
     setModalRole(role);
-    setModalFields({ ...role });
+    setModalFields(normalizeRoleForForm(role));
     setShowModal(true);
+
+    const token = localStorage.getItem('token');
+    if (!token || !role?.id) return;
+
+    try {
+      const res = await fetch(`/api/users/roles/${encodeURIComponent(role.id)}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data?.error || 'Failed to load role');
+
+      setModalRole(data.role);
+      setModalFields(normalizeRoleForForm(data.role));
+    } catch {
+      // keep modal open with current data
+    }
   };
+
   const closeSalaryModal = () => {
     setShowModal(false);
     setModalRole(null);
     setModalFields(null);
+    setSaveError('');
+    setSaving(false);
+  };
+
+  const saveSalarySettings = async () => {
+    const token = localStorage.getItem('token');
+    if (!token || !modalFields?.id) return;
+
+    const salaryType = String(modalFields.salary_type || '').trim();
+
+    const hourlyWageNum = Number(modalFields.hourly_wage);
+    const noPayNum = Number(modalFields.no_pay_rate);
+    const allowanceNum = Number(modalFields.allowance);
+
+    const monthlySalaryNum =
+      salaryType === 'monthly'
+        ? (modalFields.monthly_salary === '' || modalFields.monthly_salary === null || modalFields.monthly_salary === undefined
+            ? NaN
+            : Number(modalFields.monthly_salary))
+        : null;
+
+    if (salaryType !== 'hourly' && salaryType !== 'monthly') {
+      setSaveError('Salary type must be hourly or monthly.');
+      return;
+    }
+
+    if (!Number.isFinite(hourlyWageNum) || hourlyWageNum < 0) {
+      setSaveError('Hourly wage must be a non-negative number.');
+      return;
+    }
+
+    if (!Number.isFinite(noPayNum) || noPayNum < 0) {
+      setSaveError('No pay rate must be a non-negative number.');
+      return;
+    }
+
+    if (!Number.isFinite(allowanceNum) || allowanceNum < 0) {
+      setSaveError('Allowance must be a non-negative number.');
+      return;
+    }
+
+    if (salaryType === 'monthly' && (!Number.isFinite(monthlySalaryNum) || monthlySalaryNum < 0)) {
+      setSaveError('Monthly salary must be a non-negative number.');
+      return;
+    }
+
+    const otIncluded = Boolean(modalFields.ot_included);
+
+    const numOrNull = (v) => {
+      if (v === '' || v === undefined || v === null) return null;
+      const n = Number(v);
+      return Number.isFinite(n) && n >= 0 ? n : NaN;
+    };
+
+    const otRateNum = otIncluded ? numOrNull(modalFields.ot_rate) : null;
+    const doubleOtNum = otIncluded ? numOrNull(modalFields.double_ot_rate) : null;
+    const tripleOtNum = otIncluded ? numOrNull(modalFields.triple_ot_rate) : null;
+
+    if ([otRateNum, doubleOtNum, tripleOtNum].some((n) => Number.isNaN(n))) {
+      setSaveError('OT rates must be non-negative numbers.');
+      return;
+    }
+
+    const dailyRateNum =
+      salaryType === 'monthly' ? Math.round((monthlySalaryNum / 30) * 100) / 100 : null;
+
+    setSaving(true);
+    setSaveError('');
+
+    try {
+      const res = await fetch(`/api/users/roles/${encodeURIComponent(modalFields.id)}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          salary_type: salaryType,
+          hourly_wage: hourlyWageNum,
+          monthly_salary: salaryType === 'monthly' ? monthlySalaryNum : null,
+          daily_rate: dailyRateNum,
+          no_pay_rate: noPayNum,
+          allowance: allowanceNum,
+          ot_included: otIncluded,
+          ot_rate: otRateNum,
+          double_ot_rate: doubleOtNum,
+          triple_ot_rate: tripleOtNum,
+          epf_enabled: Boolean(modalFields.epf_enabled),
+        }),
+      });
+
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data?.error || 'Failed to update role');
+
+      const updatedRole = data?.role;
+      if (updatedRole) {
+        setRoles((prev) => prev.map((r) => (r.id === updatedRole.id ? updatedRole : r)));
+        setModalRole(updatedRole);
+        setModalFields(normalizeRoleForForm(updatedRole));
+      }
+
+      closeSalaryModal();
+    } catch (err) {
+      setSaveError(err?.message || 'Failed to update role');
+    } finally {
+      setSaving(false);
+    }
   };
 
   // Filtered and paginated roles
-  const filteredRoles = mockRoles.filter((role) =>
-    role.role_name.toLowerCase().includes(search.toLowerCase())
-  ).slice(0, entries);
-
+  const filteredRoles = roles
+    .filter((role) => (role?.role_name || '').toLowerCase().includes(search.toLowerCase()))
+    .slice(0, entries);
 
 
   return (
@@ -204,6 +295,10 @@ const RoleList = () => {
           </span>
         </div>
 
+        {rolesError && (
+          <div className="px-12 max-md:px-6 text-sm text-red-600">{rolesError}</div>
+        )}
+
         {/* Table */}
         <div className="flex flex-col flex-grow px-12 py-5 max-sm:px-6 max-lg:min-h-full overflow-y-auto">
           <span></span>
@@ -223,14 +318,23 @@ const RoleList = () => {
                   <tr key={role.id} className="text-black bg-white border-2">
                     {columnVisibility.id && <td className="px-3 py-2 font-medium whitespace-nowrap">{idx + 1}</td>}
                     {columnVisibility.role_name && <td className="px-3 py-2">{role.role_name}</td>}
-                    {columnVisibility.salary_type && <td className="px-3 py-2"><span className="px-2 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-800">{role.salary_type.charAt(0).toUpperCase() + role.salary_type.slice(1)}</span></td>}
-                    {columnVisibility.hourly_wage && <td className="px-3 py-2">{role.hourly_wage}</td>}
-                    {columnVisibility.monthly_salary && <td className="px-3 py-2">{role.monthly_salary}</td>}
-                    {columnVisibility.permission_count && <td className="px-3 py-2 text-center">{role.permission_count}</td>}
+                    {columnVisibility.salary_type && (
+                      <td className="px-3 py-2">
+                        <span className="px-2 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-800">
+                          {(() => {
+                            const st = String(role.salary_type || '');
+                            return st ? st.charAt(0).toUpperCase() + st.slice(1) : '-';
+                          })()}
+                        </span>
+                      </td>
+                    )}
+                    {columnVisibility.hourly_wage && <td className="px-3 py-2">{role.hourly_wage ?? '-'}</td>}
+                    {columnVisibility.monthly_salary && <td className="px-3 py-2">{role.monthly_salary ?? '-'}</td>}
+                    {columnVisibility.permission_count && <td className="px-3 py-2 text-center">{role.permission_count ?? 0}</td>}
                     {columnVisibility.manage && (
                       <td className="px-3 py-2 text-end">
-                        <button className="p-2 mr-2 text-white bg-blue-600 border-2 rounded-lg" onClick={() => openSalaryModal(role.data)}>Salary Settings</button>
-                        <button className="p-2 border-2 rounded-lg" onClick={handleManagePermissions} >Manage Permissions</button>
+                        <button className="p-2 mr-2 text-white bg-blue-600 border-2 rounded-lg" onClick={() => openSalaryModal(role)}>Salary Settings</button>
+                        <button className="p-2 border-2 rounded-lg" onClick={handleManagePermissions}>Manage Permissions</button>
                       </td>
                     )}
                   </tr>
@@ -258,11 +362,25 @@ const RoleList = () => {
                     <label className="block mb-2 text-sm font-medium text-gray-900">Salary Type</label>
                     <div className="flex gap-4">
                       <label className="flex items-center">
-                        <input type="radio" name="salary_type" value="hourly" checked={modalRole.salary_type === 'hourly'} readOnly className="w-4 h-4 text-blue-600" />
+                        <input
+                          type="radio"
+                          name="salary_type"
+                          value="hourly"
+                          checked={modalFields.salary_type === 'hourly'}
+                          onChange={() => setModalFields((f) => ({ ...f, salary_type: 'hourly' }))}
+                          className="w-4 h-4 text-blue-600"
+                        />
                         <span className="ml-2 text-sm font-medium text-gray-900">Hourly Rate</span>
                       </label>
                       <label className="flex items-center">
-                        <input type="radio" name="salary_type" value="monthly" checked={modalRole.salary_type === 'monthly'} readOnly className="w-4 h-4 text-blue-600" />
+                        <input
+                          type="radio"
+                          name="salary_type"
+                          value="monthly"
+                          checked={modalFields.salary_type === 'monthly'}
+                          onChange={() => setModalFields((f) => ({ ...f, salary_type: 'monthly' }))}
+                          className="w-4 h-4 text-blue-600"
+                        />
                         <span className="ml-2 text-sm font-medium text-gray-900">Monthly Salary</span>
                       </label>
                     </div>
@@ -273,7 +391,21 @@ const RoleList = () => {
                       <h4 className="mb-3 text-sm font-semibold text-gray-900">Hourly Rate Configuration</h4>
                       <div className="mb-3">
                         <label htmlFor="hourly_wage" className="block mb-2 text-sm font-medium text-gray-900">Hourly Wage (LKR)</label>
-                        <input type="number" id="hourly_wage" step="0.01" min="0" value={modalFields.hourly_wage} readOnly className="bg-white border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5" placeholder="0.00" />
+                        <input
+                          type="number"
+                          id="hourly_wage"
+                          step="0.01"
+                          min="0"
+                          value={modalFields.hourly_wage ?? ''}
+                          onChange={(e) =>
+                            setModalFields((f) => ({
+                              ...f,
+                              hourly_wage: e.target.value,
+                            }))
+                          }
+                          className="bg-white border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
+                          placeholder="0.00"
+                        />
                       </div>
                     </div>
                   )}
@@ -283,7 +415,29 @@ const RoleList = () => {
                       <h4 className="mb-3 text-sm font-semibold text-gray-900">Monthly Salary Configuration</h4>
                       <div className="mb-3">
                         <label htmlFor="monthly_salary" className="block mb-2 text-sm font-medium text-gray-900">Monthly Basic Salary (LKR)</label>
-                        <input type="number" id="monthly_salary" step="0.01" min="0" value={modalFields.monthly_salary || ''} readOnly className="bg-white border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5" placeholder="0.00" />
+                        <input
+                          type="number"
+                          id="monthly_salary"
+                          step="0.01"
+                          min="0"
+                          value={modalFields.monthly_salary ?? ''}
+                          onChange={(e) => {
+                            const v = e.target.value;
+                            setModalFields((f) => {
+                              const n = Number(v);
+                              const daily = v === '' || !Number.isFinite(n)
+                                ? ''
+                                : String(Math.round((n / 30) * 100) / 100);
+                              return {
+                                ...f,
+                                monthly_salary: v,
+                                daily_rate: daily,
+                              };
+                            });
+                          }}
+                          className="bg-white border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
+                          placeholder="0.00"
+                        />
                       </div>
                       <div className="mb-3">
                         <label htmlFor="daily_rate" className="block mb-2 text-sm font-medium text-gray-900">Daily Rate (LKR) <span className="text-xs text-gray-500">(Auto-calculated: Monthly ÷ 30)</span></label>
@@ -291,12 +445,30 @@ const RoleList = () => {
                       </div>
                       <div className="mb-3">
                         <label htmlFor="allowance" className="block mb-2 text-sm font-medium text-gray-900">Monthly Allowance (LKR) <span className="text-xs text-gray-500">(Transportation, meals, etc.)</span></label>
-                        <input type="number" id="allowance" step="0.01" min="0" value={modalFields.allowance || ''} readOnly className="bg-white border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5" placeholder="0.00" />
+                        <input
+                          type="number"
+                          id="allowance"
+                          step="0.01"
+                          min="0"
+                          value={modalFields.allowance ?? ''}
+                          onChange={(e) => setModalFields((f) => ({ ...f, allowance: e.target.value }))}
+                          className="bg-white border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
+                          placeholder="0.00"
+                        />
                         <p className="mt-1 text-xs text-gray-500">This allowance will be added to the monthly salary</p>
                       </div>
                       <div className="mb-3">
                         <label htmlFor="no_pay_rate" className="block mb-2 text-sm font-medium text-gray-900">No Pay Rate (LKR/day) <span className="text-xs text-gray-500">(Deduction per absent day)</span></label>
-                        <input type="number" id="no_pay_rate" step="0.01" min="0" value={modalFields.no_pay_rate || ''} readOnly className="bg-white border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus-border-blue-500 block w-full p-2.5" placeholder="0.00" />
+                        <input
+                          type="number"
+                          id="no_pay_rate"
+                          step="0.01"
+                          min="0"
+                          value={modalFields.no_pay_rate ?? ''}
+                          onChange={(e) => setModalFields((f) => ({ ...f, no_pay_rate: e.target.value }))}
+                          className="bg-white border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus-border-blue-500 block w-full p-2.5"
+                          placeholder="0.00"
+                        />
                         <p className="mt-1 text-xs text-gray-500">This amount will be deducted for each absent day (No Pay)</p>
                       </div>
                       {/* EPF/ETF Section */}
@@ -304,7 +476,13 @@ const RoleList = () => {
                         <div className="flex items-center justify-between mb-2">
                           <h5 className="text-sm font-semibold text-gray-900">EPF/ETF Deductions</h5>
                           <label className="relative inline-flex items-center cursor-pointer">
-                            <input type="checkbox" id="epf_enabled" checked={modalFields.epf_enabled} readOnly className="sr-only peer" />
+                            <input
+                              type="checkbox"
+                              id="epf_enabled"
+                              checked={Boolean(modalFields.epf_enabled)}
+                              onChange={(e) => setModalFields((f) => ({ ...f, epf_enabled: e.target.checked }))}
+                              className="sr-only peer"
+                            />
                             <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-orange-300 rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-orange-600"></div>
                             <span className="text-sm font-medium text-gray-900 ms-3">Enable EPF/ETF</span>
                           </label>
@@ -325,7 +503,7 @@ const RoleList = () => {
                         <input
                           type="checkbox"
                           id="ot_included"
-                          checked={modalFields.ot_included}
+                          checked={Boolean(modalFields.ot_included)}
                           onChange={e => setModalFields(fields => ({ ...fields, ot_included: e.target.checked }))}
                           className="sr-only peer"
                         />
@@ -337,15 +515,42 @@ const RoleList = () => {
                       <div id="otRatesSection" className="space-y-3">
                         <div>
                           <label htmlFor="ot_rate" className="block mb-2 text-sm font-medium text-gray-900">OT Rate (LKR/hour)</label>
-                          <input type="number" id="ot_rate" step="0.01" min="0" value={modalFields.ot_rate || ''} readOnly className="bg-white border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5" placeholder="0.00" />
+                          <input
+                            type="number"
+                            id="ot_rate"
+                            step="0.01"
+                            min="0"
+                            value={modalFields.ot_rate ?? ''}
+                            onChange={(e) => setModalFields((f) => ({ ...f, ot_rate: e.target.value }))}
+                            className="bg-white border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
+                            placeholder="0.00"
+                          />
                         </div>
                         <div>
                           <label htmlFor="double_ot_rate" className="block mb-2 text-sm font-medium text-gray-900">Double OT Rate (LKR/hour)</label>
-                          <input type="number" id="double_ot_rate" step="0.01" min="0" value={modalFields.double_ot_rate || ''} readOnly className="bg-white border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5" placeholder="0.00" />
+                          <input
+                            type="number"
+                            id="double_ot_rate"
+                            step="0.01"
+                            min="0"
+                            value={modalFields.double_ot_rate ?? ''}
+                            onChange={(e) => setModalFields((f) => ({ ...f, double_ot_rate: e.target.value }))}
+                            className="bg-white border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
+                            placeholder="0.00"
+                          />
                         </div>
                         <div>
                           <label htmlFor="triple_ot_rate" className="block mb-2 text-sm font-medium text-gray-900">Triple OT Rate (LKR/hour)</label>
-                          <input type="number" id="triple_ot_rate" step="0.01" min="0" value={modalFields.triple_ot_rate || ''} readOnly className="bg-white border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5" placeholder="0.00" />
+                          <input
+                            type="number"
+                            id="triple_ot_rate"
+                            step="0.01"
+                            min="0"
+                            value={modalFields.triple_ot_rate ?? ''}
+                            onChange={(e) => setModalFields((f) => ({ ...f, triple_ot_rate: e.target.value }))}
+                            className="bg-white border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
+                            placeholder="0.00"
+                          />
                         </div>
                         <div className="p-3 text-xs text-blue-800 rounded-lg bg-blue-100">
                           <strong>Tip:</strong> You can calculate hourly rate from daily price: Daily Price ÷ Hours Worked = Hourly Rate
@@ -354,8 +559,14 @@ const RoleList = () => {
                     )}
                   </div>
                 </div>
-                <div className="flex items-center p-4 border-t border-gray-200 rounded-b md:p-5">
-                  <button type="button" onClick={closeSalaryModal} className="py-2.5 px-5 ms-3 text-sm font-medium text-gray-900 focus:outline-none bg-white rounded-lg border border-gray-200 hover:bg-gray-100 hover:text-blue-700 focus:z-10 focus:ring-4 focus:ring-gray-100">Close</button>
+                <div className="p-4 border-t border-gray-200 rounded-b md:p-5">
+                  {saveError && (
+                    <div className="mb-3 text-sm text-red-600">{saveError}</div>
+                  )}
+                  <div className="flex items-center justify-end gap-2">
+                    <button type="button" onClick={closeSalaryModal} className="py-2.5 px-5 text-sm font-medium text-gray-900 focus:outline-none bg-white rounded-lg border border-gray-200 hover:bg-gray-100 hover:text-blue-700 focus:z-10 focus:ring-4 focus:ring-gray-100">Cancel</button>
+                    <button type="button" onClick={saveSalarySettings} disabled={saving} className="py-2.5 px-5 text-sm font-medium text-white bg-[#3c8c2c] rounded-lg disabled:opacity-60">{saving ? 'Saving...' : 'Save'}</button>
+                  </div>
                 </div>
               </div>
             </div>

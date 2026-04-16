@@ -70,7 +70,7 @@ const UserList = () => {
 
   const handleEdit = (e, userId) => {
     e.preventDefault();
-    navigate('/users/edit_users', { state: { userId } });
+    navigate(`/users/edit_users?id=${encodeURIComponent(userId)}`);
   };
 
   const handleToggleStatus = async (user) => {

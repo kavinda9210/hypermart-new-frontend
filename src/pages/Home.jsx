@@ -1,13 +1,47 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import './Home.css';
 
 const Home = () => {
+  const navigate = useNavigate();
+
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [focusedInput, setFocusedInput] = useState(null);
 
-  const handleSubmit = () => {
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    const token = localStorage.getItem('token');
+    if (token) navigate('/dashboard', { replace: true });
+  }, [navigate]);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
     setIsLoading(true);
+    setError(null);
+
+    try {
+      const res = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password }),
+      });
+
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data?.error || 'Login failed');
+
+      localStorage.setItem('token', data.token);
+      localStorage.setItem('user', JSON.stringify(data.user));
+
+      navigate('/dashboard');
+    } catch (err) {
+      setError(err?.message || 'Login failed');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -26,17 +60,9 @@ const Home = () => {
 
           <div className="w-1/2 max-lg:w-full fade-in" style={{ animationDelay: '0.2s' }}>
           <form
-            method="POST"
-            action="/login"
             className="bg-slate-800 rounded-2xl shadow-2xl p-8 space-y-6 border border-slate-700"
             onSubmit={handleSubmit}
           >
-            <input
-              type="hidden"
-              name="_token"
-              value="k32MURs32BdhFUEHy3GVgPQJWxRuV5G8FLGWUdA4"
-              autoComplete="off"
-            />
 
               <div className="text-center space-y-2">
                 <h1 className="text-4xl max-sm:text-3xl text-white font-bold">Welcome Back</h1>
@@ -64,12 +90,14 @@ const Home = () => {
                   </svg>
                 </div>
                 <input
-                  type="text"
+                  type="email"
                   id="email"
                   name="email"
                   placeholder="Enter your email"
                   required
                   autoFocus
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
                   onFocus={() => setFocusedInput('email')}
                   onBlur={() => setFocusedInput(null)}
                     className="bg-slate-700 border border-slate-600 text-white text-sm rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 block w-full pl-10 p-3 placeholder-slate-400 transition-all duration-200"
@@ -104,6 +132,8 @@ const Home = () => {
                   placeholder="Enter your password"
                   required
                   autoComplete="current-password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
                   onFocus={() => setFocusedInput('password')}
                   onBlur={() => setFocusedInput(null)}
                     className="bg-slate-700 border border-slate-600 text-white text-sm rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 block w-full pl-10 pr-10 p-3 placeholder-slate-400 transition-all duration-200"
@@ -153,6 +183,12 @@ const Home = () => {
                 Forgot Password?
               </a>
             </div>
+
+            {error && (
+              <div className="text-sm text-red-300 bg-red-900/30 border border-red-800 rounded-lg p-3">
+                {error}
+              </div>
+            )}
 
             <button
               type="submit"

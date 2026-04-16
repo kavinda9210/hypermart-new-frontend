@@ -96,6 +96,7 @@ const panelItems = [
 ];
 
 function Dashboard({
+  role,
   onOpenDashbord,
   onOpenBilling,
   onOpenItem,
@@ -128,6 +129,14 @@ function Dashboard({
     'Stock Reports': onStockReports,
   };
 
+  const allowedLabelsByRole = {
+    cashier: new Set(['Dashboard', 'Billing', 'Sales', 'Due Amount']),
+  };
+
+  const itemsToRender = allowedLabelsByRole[role]
+    ? panelItems.filter((i) => allowedLabelsByRole[role].has(i.label))
+    : panelItems;
+
   return (
     <Layout showMainPanelButton={false} showPosButton={false}>
       <main
@@ -140,7 +149,7 @@ function Dashboard({
         }}
       >
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 w-fit h-fit py-6 xl:py-9 2xl:py-28 gap-6 text-white px-12">
-          {panelItems.map((item) => {
+          {itemsToRender.map((item) => {
             const sharedClass = 'w-[250px] max-lg:w-[200px] h-[200px] max-lg:h-[150px] text-white uppercase lg:text-xl transform transition-all duration-300 ease-in-out hover:translate-y-[-10px] hover:scale-[1.02] hover:rotate-[1deg] cardBox';
             if (item.label === 'Dashboard') {
               return (

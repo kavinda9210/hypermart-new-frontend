@@ -3,6 +3,8 @@ import CustomerInvoice from './pages/sales/customer_invoice/CusomerInvoice';
 import ReturnListView from './pages/sales/return_list_view/ReturnListView';
 import React from 'react';
 import { Navigate, Route, Routes, useNavigate } from 'react-router-dom';
+
+import Home from './pages/Home';
 // Dashboard and Main Panel
 import Dashboard from './pages/Dashboard';
 import DashbordDashboard from './pages/dashbord/Dashboard';
@@ -111,37 +113,55 @@ import PosMachines from './pages/admin/pos_machines/PosMachines';
 
 function App() {
   const navigate = useNavigate();
+
+  const token = localStorage.getItem('token');
+  let user = null;
+  try {
+    user = JSON.parse(localStorage.getItem('user') || 'null');
+  } catch {
+    user = null;
+  }
+  const role = user?.role || null;
+
   const goToMainPanel = () => navigate('/dashboard');
 
   return (
     <div className="App">
       <Routes>
-        <Route path="/" element={<Navigate to="/dashboard" replace />} />
+        <Route path="/" element={token ? <Navigate to="/dashboard" replace /> : <Home />} />
 
         <Route
           path="/dashboard"
           element={
-            <Dashboard
-              onOpenDashbord={() => navigate('/dashboard/dashboard')}
-              onOpenBilling={() => navigate('/sales/billing')}
-              onOpenItem={() => navigate('/item')}
-              onExportPanel={() => navigate('/item/export_panel')}
-              onStock={() => navigate('/stock/stock')}
-              onOpenSales={() => navigate('/sales/sales')}
-              onDueAmount={() => navigate('sales/due_amount')}
-              onOpenUsers={() => navigate('/users/users')}
-              onOpenCustomers={() => navigate('/customers/customers')}
-              onOpenSuppliers={() => navigate('/suppliers/suppliers')}
-              onOpenExpenses={() => navigate('/expenses/expenses')}
-              onOpenFinance={() => navigate('/finance')}
-              onOpenReports={() => navigate('/reports/reports')}
-              onOpenStockReport={() => navigate('reports/stock_report')}
-              onOpenSettings={() => navigate('/settings/settings')}
-            />
+            token ? (
+              <Dashboard
+                role={role}
+                onOpenDashbord={() => navigate('/dashboard/dashboard')}
+                onOpenBilling={() => navigate('/sales/billing')}
+                onOpenItem={() => navigate('/item')}
+                onExportPanel={() => navigate('/item/export_panel')}
+                onStock={() => navigate('/stock/stock')}
+                onOpenSales={() => navigate('/sales/sales')}
+                onDueAmount={() => navigate('sales/due_amount')}
+                onOpenUsers={() => navigate('/users/users')}
+                onOpenCustomers={() => navigate('/customers/customers')}
+                onOpenSuppliers={() => navigate('/suppliers/suppliers')}
+                onOpenExpenses={() => navigate('/expenses/expenses')}
+                onOpenFinance={() => navigate('/finance')}
+                onOpenReports={() => navigate('/reports/reports')}
+                onOpenStockReport={() => navigate('reports/stock_report')}
+                onOpenSettings={() => navigate('/settings/settings')}
+              />
+            ) : (
+              <Navigate to="/" replace />
+            )
           }
         />
           {/* Dashboard */}
-        <Route path="/dashboard/dashboard" element={<DashbordDashboard onBackToMain={goToMainPanel} />} />
+        <Route
+          path="/dashboard/dashboard"
+          element={token ? <DashbordDashboard onBackToMain={goToMainPanel} /> : <Navigate to="/" replace />}
+        />
           {/* Sales */}
         <Route path="/sales/billing" element={<Billing onBackToMain={goToMainPanel} />} />
         <Route path="/sales/sales" element={<SalesPage onBackToMain={goToMainPanel} />} />
@@ -255,7 +275,7 @@ function App() {
         <Route path="/settings/changeSite" element={<ChangeSite onBackToMain={goToMainPanel} />} />
         <Route path="/admin/pos_machines" element={<PosMachines onBackToMain={goToMainPanel} />} />
 
-        <Route path="*" element={<Navigate to="/dashboard" replace />} />
+        <Route path="*" element={<Navigate to={token ? '/dashboard' : '/'} replace />} />
       </Routes>
     </div>
   );

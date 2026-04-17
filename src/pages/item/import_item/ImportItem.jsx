@@ -8,10 +8,7 @@ const CSV_HEADERS = [
 	'Wholesale Price', 'Additional Fees Percentage', 'Additional Fees Amount', 'Status ID', 'Start Qty'
 ];
 
-const SAMPLE_ROW = [
-	'ITEM001', '1234567890123', 'Sample Item', 'Sample Item Alt Name', 'Sample item description', '0', '', '', '1', '1',
-	'100', '1', '10', '50.00', '55.00', '75.00', '65.00', '2.5', '0', '1', '100'
-];
+
 
 function parseCSV(text) {
 	const lines = text.trim().split(/\r?\n/);
@@ -60,12 +57,33 @@ const ImportItem = () => {
 			alert('No data to import.');
 			return;
 		}
-		// Simulate import
-		alert('Import simulated. Data rows: ' + csvRows.length);
+		setLoading(true);
+		fetch('/api/items/import', {
+			method: 'POST',
+			headers: {
+				'Content-Type': 'application/json',
+				Authorization: `Bearer ${localStorage.getItem('token')}`,
+			},
+			body: JSON.stringify({ items: csvRows }),
+		})
+			.then(async (res) => {
+				setLoading(false);
+				if (!res.ok) {
+					const data = await res.json().catch(() => ({}));
+					alert(data?.error || 'Import failed.');
+					return;
+				}
+				alert('Import successful!');
+				setCsvRows([]);
+			})
+			.catch(() => {
+				setLoading(false);
+				alert('Network error.');
+			});
 	};
 
 	const handleDownloadTemplate = () => {
-		const csvContent = CSV_HEADERS.join(',') + '\n' + SAMPLE_ROW.join(',');
+		const csvContent = CSV_HEADERS.join(',');
 		const blob = new Blob([csvContent], { type: 'text/csv' });
 		const url = URL.createObjectURL(blob);
 		const a = document.createElement('a');

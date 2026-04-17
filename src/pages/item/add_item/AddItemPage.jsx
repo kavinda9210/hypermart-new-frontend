@@ -49,6 +49,8 @@ import './AddItemPage.css';
 function AddItemPage() {
   const navigate = useNavigate();
   const [expiryEnabled, setExpiryEnabled] = useState(false);
+  // Use the same normalization logic as EditItemPage for image preview
+  const BACKEND_URL = 'http://localhost:3000';
   const [imagePreview, setImagePreview] = useState(null);
   const [imageName, setImageName] = useState('');
   const [imageFile, setImageFile] = useState(null);
@@ -128,6 +130,33 @@ function AddItemPage() {
     setExpiryEnabled(e.target.checked);
   };
 
+  const normalizeImageSrc = (src) => {
+    const value = String(src || '').trim();
+    if (!value) return BACKEND_URL + '/upload/items/default.png';
+    if (value.startsWith('data:')) return value;
+    if (value.startsWith('http://') || value.startsWith('https://')) return value;
+    const absMatch = value.match(/[\\/]images[\\/]upload[\\/]items[\\/](.+)$/i);
+    if (absMatch) {
+      return BACKEND_URL + '/upload/items/' + absMatch[1];
+    }
+    if (value.startsWith('/upload/items/')) {
+      return BACKEND_URL + value;
+    }
+    if (value.startsWith('upload/items/')) {
+      return BACKEND_URL + '/' + value;
+    }
+    if (value.startsWith('/images/upload/items/')) {
+      return BACKEND_URL + '/upload/items/' + value.replace('/images/upload/items/', '');
+    }
+    if (value.startsWith('images/upload/items/')) {
+      return BACKEND_URL + '/upload/items/' + value.replace('images/upload/items/', '');
+    }
+    if (/^[^\/]+\.(jpg|jpeg|png|gif|webp)$/i.test(value)) {
+      return BACKEND_URL + '/upload/items/' + value;
+    }
+    return BACKEND_URL + '/upload/items/default.png';
+  };
+
   const handleImageChange = (e) => {
     const file = e.target.files[0];
     if (file) {
@@ -182,6 +211,7 @@ function AddItemPage() {
         const imgData = await imgResp.json().catch(() => ({}));
         if (imgResp.ok && imgData.image_path) {
           image_path = imgData.image_path;
+          setImagePreview(normalizeImageSrc(image_path));
         } else {
           setError(imgData?.error || 'Failed to upload image.');
           setLoading(false);
@@ -189,6 +219,12 @@ function AddItemPage() {
         }
       } catch {
         setError('Network error during image upload.');
+        setLoading(false);
+        return;
+      }
+      // If image_path is still empty after upload attempt, prevent saving
+      if (!image_path) {
+        setError('Image upload failed. Item will not be saved.');
         setLoading(false);
         return;
       }
@@ -244,6 +280,8 @@ function AddItemPage() {
       setImagePreview(null);
       setImageName('');
       setImageFile(null);
+      // Redirect to item list to see the new item and image
+      setTimeout(() => navigate('/item/item_list'), 800);
     } catch {
       setError('Network error. Please try again.');
     } finally {

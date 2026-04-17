@@ -1,27 +1,10 @@
-import React, { useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import Layout from '../../../components/Layout';
 import './SupplierList.css';
 import * as XLSX from 'xlsx';
 import { jsPDF } from 'jspdf';
 import 'jspdf-autotable';
 import { useNavigate } from 'react-router-dom';
-
-const supplierRows = [
-  {
-    id: 1,
-    supplierCode: '1',
-    supplierName: 'sample supplier',
-    mobileNumber: '1223567870',
-    emailAddress: 'sample@gmail.com',
-    address: 'Colombo',
-    userId: '1',
-    cityId: '1',
-    statusId: '1',
-    cityName: '',
-    statusButtonLabel: 'Deactivate',
-    statusButtonClass: 'bg-green-600',
-  },
-];
 
 const columnDefinitions = [
   { key: 'supplierCode', label: 'Supplier Code' },
@@ -36,6 +19,8 @@ const SupplierList = () => {
   const navigate = useNavigate();
   const tableRef = useRef(null);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [rows, setRows] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [entries, setEntries] = useState('30');
   const [isPopoverOpen, setIsPopoverOpen] = useState(false);
@@ -48,15 +33,86 @@ const SupplierList = () => {
     manage: true,
   });
 
+  const normalizeRow = (supplier) => {
+    const statusId = Number(supplier?.status_id) || 1;
+    const isActive = statusId === 1;
+
+    return {
+      id: supplier.id,
+      supplierCode: String(supplier.id),
+      supplierName: supplier.supplier_name || '',
+      mobileNumber: supplier.contact_number || '',
+      emailAddress: supplier.email || '',
+      address: supplier.address || '',
+      userId: supplier.user_id ? String(supplier.user_id) : '',
+      cityId: supplier.city_id ? String(supplier.city_id) : '',
+      statusId: String(statusId),
+      cityName: supplier.city_name || '',
+      statusButtonLabel: isActive ? 'Deactivate' : 'Activate',
+      statusButtonClass: isActive ? 'bg-green-600' : 'bg-red-600',
+    };
+  };
+
+  const fetchSuppliers = async () => {
+    const token = localStorage.getItem('token');
+    if (!token) {
+      localStorage.removeItem('user');
+      window.location.assign('/');
+      return;
+    }
+
+    setError('');
+    setLoading(true);
+    try {
+      const limit = Number.parseInt(entries, 10);
+      const safeLimit = Number.isFinite(limit) && limit > 0 ? limit : 30;
+
+      const search = searchTerm.trim();
+      const qs = new URLSearchParams();
+      qs.set('limit', String(safeLimit));
+      if (search) qs.set('search', search);
+
+      const resp = await fetch(`/api/suppliers?${qs.toString()}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      const data = await resp.json().catch(() => ({}));
+
+      if (resp.status === 401) {
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+        window.location.assign('/');
+        return;
+      }
+
+      if (!resp.ok) {
+        setError(data?.error || 'Failed to load suppliers.');
+        return;
+      }
+
+      const nextRows = Array.isArray(data?.suppliers) ? data.suppliers.map(normalizeRow) : [];
+      setRows(nextRows);
+    } catch {
+      setError('Network error. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchSuppliers();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const filteredRows = useMemo(() => {
     const normalizedSearch = searchTerm.trim().toLowerCase();
     const limit = Number.parseInt(entries, 10);
     const safeLimit = Number.isFinite(limit) && limit > 0 ? limit : 30;
 
-    return supplierRows
+    return rows
       .filter((row) => row.supplierName.toLowerCase().includes(normalizedSearch))
       .slice(0, safeLimit);
-  }, [searchTerm, entries]);
+  }, [rows, searchTerm, entries]);
 
   const toggleColumn = (key) => {
     setVisibleColumns((current) => ({
@@ -65,8 +121,6 @@ const SupplierList = () => {
     }));
   };
 
-  const showLoading = () => setLoading(true);
-  const hideLoading = () => setLoading(false);
 
   const exportTableRows = () => {
     const header = columnDefinitions.map((column) => column.label).join('\t');
@@ -124,13 +178,50 @@ const SupplierList = () => {
     doc.save('supplier.pdf');
   };
 
-  const handleEditSupplier = (e) => {
+  const handleEditSupplier = (e, supplierId) => {
     e.preventDefault();
-    navigate(`/suppliers/edit_supplier`);
+    navigate(`/suppliers/edit_supplier?id=${supplierId}`);
   };
 
-  const handleToggleStatus = (supplierId) => {
-    window.alert(`Toggle status for supplier ${supplierId} is not wired in the React demo.`);
+  const handleToggleStatus = async (supplierId) => {
+    const token = localStorage.getItem('token');
+    if (!token) {
+      localStorage.removeItem('user');
+      window.location.assign('/');
+      return;
+    }
+
+    setError('');
+    setLoading(true);
+    try {
+      const resp = await fetch(`/api/suppliers/${supplierId}/toggle-status`, {
+        method: 'PATCH',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      const data = await resp.json().catch(() => ({}));
+
+      if (resp.status === 401) {
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+        window.location.assign('/');
+        return;
+      }
+
+      if (!resp.ok) {
+        setError(data?.error || 'Failed to update status.');
+        return;
+      }
+
+      const updated = data?.supplier ? normalizeRow(data.supplier) : null;
+      if (updated) {
+        setRows((current) => current.map((r) => (r.id === supplierId ? updated : r)));
+      }
+    } catch {
+      setError('Network error. Please try again.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleDeleteSupplier = (supplierId) => {
@@ -140,10 +231,7 @@ const SupplierList = () => {
   };
 
   const handleSearch = () => {
-    showLoading();
-    window.setTimeout(() => {
-      hideLoading();
-    }, 250);
+    fetchSuppliers();
   };
 
   return (
@@ -153,6 +241,14 @@ const SupplierList = () => {
           <div id="loading-overlay" className="loading-overlay">
             <div className="text-center">
               <div className="spinner" />
+            </div>
+          </div>
+        )}
+
+        {error && (
+          <div className="px-12 max-sm:px-6">
+            <div className="mb-2 rounded-lg border border-red-300 bg-red-50 px-4 py-3 text-sm text-red-700">
+              {error}
             </div>
           </div>
         )}
@@ -282,7 +378,7 @@ const SupplierList = () => {
                       <td className="hidden px-4 py-2">{row.statusId}</td>
                       <td className="hidden px-4 py-2">{row.cityName}</td>
                       <td className={`px-4 py-2 ${visibleColumns.manage ? '' : 'hidden'}`}>
-                        <button type="button" className="p-2 border border-gray-300 rounded-md" onClick={ handleEditSupplier}>Edit</button>
+                        <button type="button" className="p-2 border border-gray-300 rounded-md" onClick={(e) => handleEditSupplier(e, row.id)}>Edit</button>
                         <button
                           id={`status-button-${row.id}`}
                           type="button"

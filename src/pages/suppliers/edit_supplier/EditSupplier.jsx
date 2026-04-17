@@ -1,8 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import './EditSupplier.css';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 
 const EditSupplier = () => {
+  const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const supplierId = searchParams.get('id');
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
+  const [initialForm, setInitialForm] = useState(null);
   const [form, setForm] = useState({
     name: 'sample supplier',
     mobile_number: '1223567870',
@@ -20,22 +27,150 @@ const EditSupplier = () => {
     return () => document.removeEventListener('visibilitychange', hideLoading);
   }, []);
 
+  useEffect(() => {
+    const token = localStorage.getItem('token');
+    if (!token) {
+      localStorage.removeItem('user');
+      window.location.assign('/');
+      return;
+    }
+
+    const idNum = Number(supplierId);
+    if (!Number.isInteger(idNum) || idNum <= 0) {
+      setError('Invalid supplier id.');
+      return;
+    }
+
+    const load = async () => {
+      setError('');
+      setSuccess('');
+      setLoading(true);
+      try {
+        const resp = await fetch(`/api/suppliers/${idNum}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        const data = await resp.json().catch(() => ({}));
+
+        if (resp.status === 401) {
+          localStorage.removeItem('token');
+          localStorage.removeItem('user');
+          window.location.assign('/');
+          return;
+        }
+
+        if (!resp.ok) {
+          setError(data?.error || 'Failed to load supplier.');
+          return;
+        }
+
+        const supplier = data?.supplier;
+        const next = {
+          name: supplier?.supplier_name || '',
+          mobile_number: supplier?.contact_number || '',
+          email: supplier?.email || '',
+          vat_no: supplier?.vat_no || '',
+          address: supplier?.address || '',
+          city_name: supplier?.city_name || '',
+          city: supplier?.city_id ? String(supplier.city_id) : '1',
+        };
+
+        setForm(next);
+        setInitialForm(next);
+      } catch {
+        setError('Network error. Please try again.');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    load();
+  }, [supplierId]);
+
   const handleChange = (e) => {
     const { name, value } = e.target;
     setForm((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
+    const token = localStorage.getItem('token');
+    if (!token) {
+      localStorage.removeItem('user');
+      window.location.assign('/');
+      return;
+    }
+
+    const idNum = Number(supplierId);
+    if (!Number.isInteger(idNum) || idNum <= 0) {
+      setError('Invalid supplier id.');
+      return;
+    }
+
+    setError('');
+    setSuccess('');
     setLoading(true);
-    setTimeout(() => {
+    try {
+      const payload = {
+        supplier_name: form.name,
+        contact_number: form.mobile_number,
+        email: form.email,
+        vat_no: form.vat_no,
+        address: form.address,
+        city_id: form.city,
+        city_name: form.city_name,
+      };
+
+      const resp = await fetch(`/api/suppliers/${idNum}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(payload),
+      });
+
+      const data = await resp.json().catch(() => ({}));
+
+      if (resp.status === 401) {
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+        window.location.assign('/');
+        return;
+      }
+
+      if (!resp.ok) {
+        setError(data?.error || 'Failed to update supplier.');
+        return;
+      }
+
+      setSuccess('Supplier updated successfully.');
+      const supplier = data?.supplier;
+      const next = {
+        name: supplier?.supplier_name || form.name,
+        mobile_number: supplier?.contact_number || form.mobile_number,
+        email: supplier?.email || form.email,
+        vat_no: supplier?.vat_no || form.vat_no,
+        address: supplier?.address || form.address,
+        city_name: supplier?.city_name || form.city_name,
+        city: supplier?.city_id ? String(supplier.city_id) : form.city,
+      };
+      setForm(next);
+      setInitialForm(next);
+
+      navigate('/suppliers/supplier_list');
+    } catch {
+      setError('Network error. Please try again.');
+    } finally {
       setLoading(false);
-      // Simulate form submission
-      window.location.href = '/suppliers/supplierList';
-    }, 1200);
+    }
   };
 
   const handleReset = () => {
+    if (initialForm) {
+      setForm(initialForm);
+      return;
+    }
+
     setForm({
       name: '',
       mobile_number: '',
@@ -141,6 +276,17 @@ const EditSupplier = () => {
         {/* Main Panel */}
         <div className="p-6">
           <div className="flex flex-col flex-grow h-full p-6 border-2 rounded-lg">
+            {error && (
+              <div className="mb-4 rounded-lg border border-red-300 bg-red-50 px-4 py-3 text-sm text-red-700">
+                {error}
+              </div>
+            )}
+
+            {success && (
+              <div className="mb-4 rounded-lg border border-green-300 bg-green-50 px-4 py-3 text-sm text-green-700">
+                {success}
+              </div>
+            )}
             <form onSubmit={handleSubmit} autoComplete="off">
               <div className="grid gap-6 mb-6 md:grid-cols-3">
                 <div className="md:col-span-2">
@@ -238,7 +384,7 @@ const EditSupplier = () => {
                       onChange={handleChange}
                     >
                       <option value="1">Select city</option>
-                      <option value="1" selected>default</option>
+                      <option value="1">default</option>
                     </select>
                   </div>
                 </div>

@@ -19,17 +19,53 @@ function AddCategoryPage() {
     e.preventDefault();
     setCatNameError('');
     setDescriptionError('');
-    // Simulate validation (replace with real API call as needed)
+
+    const token = localStorage.getItem('token');
+    if (!token) {
+      setCatNameError('Please login again.');
+      navigate('/', { replace: true });
+      return;
+    }
+
+    // Validation
     let hasError = false;
     if (!catName.trim()) {
       setCatNameError('Category name is required.');
       hasError = true;
     }
     if (hasError) return;
-    // Simulate success
-    alert('Category saved! (Demo)');
-    setCatName('');
-    setDescription('');
+
+    try {
+      const res = await fetch('/api/item-categories', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ categories: catName, description }),
+      });
+
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        const msg = data?.error || 'Failed to save category.';
+        if (res.status === 400 || res.status === 409) {
+          setCatNameError(msg);
+        } else if (res.status === 401) {
+          localStorage.removeItem('token');
+          localStorage.removeItem('user');
+          navigate('/', { replace: true });
+        } else {
+          setDescriptionError(msg);
+        }
+        return;
+      }
+
+      alert('Category saved!');
+      setCatName('');
+      setDescription('');
+    } catch {
+      setDescriptionError('Network error. Please try again.');
+    }
   };
 
   return (

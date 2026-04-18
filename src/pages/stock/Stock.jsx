@@ -13,6 +13,14 @@ const Stock = () => {
 
   const token = useMemo(() => localStorage.getItem('token'), []);
 
+  const [visibleCols, setVisibleCols] = useState({
+    item_code: true,
+    item_name: true,
+    category: true,
+    quantity: true,
+    manage: true,
+  });
+
   const [categories, setCategories] = useState([]);
   const [rows, setRows] = useState([]);
   const [total, setTotal] = useState(0);
@@ -117,34 +125,75 @@ const Stock = () => {
   // Copy table data to clipboard (skip Manage column)
   const handleCopy = () => {
     const table = tableRef.current;
-    let data = '';
-    for (let i = 0; i < table.rows.length; i++) {
-      let row = table.rows[i];
-      let rowData = [];
-      for (let j = 0; j < row.cells.length - 1; j++) {
-        rowData.push(row.cells[j].innerText.trim());
-      }
-      data += rowData.join('\t') + '\n';
-    }
-    navigator.clipboard.writeText(data).then(() => {
-      alert('Table data copied to clipboard in a structured format!');
-    }).catch(err => {
-      alert('Failed to copy table data.');
+    if (!table) return;
+
+    const tableRows = table.querySelectorAll('tr');
+    if (!tableRows.length) return;
+
+    let manageColumnIndex = -1;
+    const headerCells = tableRows[0].querySelectorAll('th');
+    headerCells.forEach((cell, index) => {
+      if (cell.innerText.toLowerCase() === 'manage') manageColumnIndex = index;
     });
+
+    let data = '';
+    tableRows.forEach((row) => {
+      const cols = row.querySelectorAll('td, th');
+      const rowData = [];
+      cols.forEach((col, index) => {
+        if (index !== manageColumnIndex) rowData.push(col.innerText.trim());
+      });
+      if (rowData.length > 0) data += `${rowData.join('\t')}\n`;
+    });
+
+    const write = async () => {
+      try {
+        if (navigator.clipboard?.writeText) {
+          await navigator.clipboard.writeText(data);
+        } else {
+          const textarea = document.createElement('textarea');
+          textarea.value = data;
+          textarea.style.position = 'fixed';
+          textarea.style.opacity = '0';
+          document.body.appendChild(textarea);
+          textarea.focus();
+          textarea.select();
+          document.execCommand('copy');
+          document.body.removeChild(textarea);
+        }
+        alert('Table data copied to clipboard in a structured format!');
+      } catch {
+        alert('Failed to copy table data.');
+      }
+    };
+
+    write();
   };
 
   // Export table to CSV (skip Manage column)
   const handleExportCSV = () => {
     const table = tableRef.current;
+    if (!table) return;
+    const tableRows = table.querySelectorAll('tr');
+    if (!tableRows.length) return;
+
+    let manageColumnIndex = -1;
+    const headerCells = tableRows[0].querySelectorAll('th');
+    headerCells.forEach((cell, index) => {
+      if (cell.innerText.toLowerCase() === 'manage') manageColumnIndex = index;
+    });
+
     let csvContent = '';
-    for (let i = 0; i < table.rows.length; i++) {
-      let row = table.rows[i];
-      let rowData = [];
-      for (let j = 0; j < row.cells.length - 1; j++) {
-        rowData.push('"' + row.cells[j].innerText.replace(/"/g, '""') + '"');
-      }
-      csvContent += rowData.join(',') + '\n';
-    }
+    tableRows.forEach((row) => {
+      const cols = row.querySelectorAll('td, th');
+      const rowData = [];
+      cols.forEach((col, index) => {
+        if (index !== manageColumnIndex) {
+          rowData.push('"' + String(col.innerText).replace(/"/g, '""') + '"');
+        }
+      });
+      if (rowData.length > 0) csvContent += rowData.join(',') + '\n';
+    });
     const blob = new Blob([csvContent], { type: 'text/csv' });
     const url = window.URL.createObjectURL(blob);
     const link = document.createElement('a');
@@ -157,10 +206,24 @@ const Stock = () => {
 
   // Export table to Excel (skip Manage column)
   const handleExportExcel = () => {
-    const table = tableRef.current.cloneNode(true);
-    const rows = table.rows;
-    for (let i = 0; i < rows.length; i++) {
-      rows[i].deleteCell(-1);
+    const tableEl = tableRef.current;
+    if (!tableEl) return;
+    const table = tableEl.cloneNode(true);
+    const tableRows = table.querySelectorAll('tr');
+    if (!tableRows.length) return;
+
+    let manageColumnIndex = -1;
+    const headerCells = tableRows[0].querySelectorAll('th');
+    headerCells.forEach((cell, index) => {
+      if (cell.innerText.toLowerCase() === 'manage') manageColumnIndex = index;
+    });
+
+    if (manageColumnIndex >= 0) {
+      tableRows.forEach((row) => {
+        if (row.cells && row.cells.length > manageColumnIndex) {
+          row.deleteCell(manageColumnIndex);
+        }
+      });
     }
     const worksheet = XLSX.utils.table_to_sheet(table);
     const workbook = XLSX.utils.book_new();
@@ -171,8 +234,10 @@ const Stock = () => {
   // Export table to PDF (skip Manage column)
   const handleExportPDF = () => {
     const table = tableRef.current;
+    if (!table) return;
     const rows = [];
     const tableRows = table.querySelectorAll('tr');
+    if (!tableRows.length) return;
     let manageColumnIndex = -1;
     const headerCells = tableRows[0].querySelectorAll('th');
     headerCells.forEach((cell, index) => {
@@ -192,6 +257,7 @@ const Stock = () => {
         rows.push(rowData);
       }
     });
+    if (!rows.length) return;
     const doc = new jsPDF();
     autoTable(doc, { head: [rows[0]], body: rows.slice(1) });
     doc.save('stockTable.pdf');
@@ -261,23 +327,53 @@ const Stock = () => {
                 >
                   <ul className="flex flex-col w-full text-sm font-medium text-gray-900 bg-white border border-gray-200 rounded-lg">
                     <li>
-                      <input id="filter_item_code" type="checkbox" checked readOnly className="hidden peer" />
+                      <input
+                        id="filter_item_code"
+                        type="checkbox"
+                        checked={visibleCols.item_code}
+                        onChange={() => setVisibleCols((v) => ({ ...v, item_code: !v.item_code }))}
+                        className="hidden peer"
+                      />
                       <label htmlFor="filter_item_code" className="flex w-full px-4 py-2 border-b border-gray-200 select-none peer-checked:bg-blue-300 cursor-pointer"> Item Code </label>
                     </li>
                     <li>
-                      <input id="filter_item_name" type="checkbox" checked readOnly className="hidden peer" />
+                      <input
+                        id="filter_item_name"
+                        type="checkbox"
+                        checked={visibleCols.item_name}
+                        onChange={() => setVisibleCols((v) => ({ ...v, item_name: !v.item_name }))}
+                        className="hidden peer"
+                      />
                       <label htmlFor="filter_item_name" className="flex w-full px-4 py-2 border-b border-gray-200 select-none peer-checked:bg-blue-300 cursor-pointer"> Item Name </label>
                     </li>
                     <li>
-                      <input id="filter_category" type="checkbox" checked readOnly className="hidden peer" />
+                      <input
+                        id="filter_category"
+                        type="checkbox"
+                        checked={visibleCols.category}
+                        onChange={() => setVisibleCols((v) => ({ ...v, category: !v.category }))}
+                        className="hidden peer"
+                      />
                       <label htmlFor="filter_category" className="flex w-full px-4 py-2 border-b border-gray-200 select-none peer-checked:bg-blue-300 cursor-pointer"> Category </label>
                     </li>
                     <li>
-                      <input id="filter_quantity" type="checkbox" checked readOnly className="hidden peer" />
+                      <input
+                        id="filter_quantity"
+                        type="checkbox"
+                        checked={visibleCols.quantity}
+                        onChange={() => setVisibleCols((v) => ({ ...v, quantity: !v.quantity }))}
+                        className="hidden peer"
+                      />
                       <label htmlFor="filter_quantity" className="flex w-full px-4 py-2 border-b border-gray-200 select-none peer-checked:bg-blue-300 cursor-pointer"> Quantity </label>
                     </li>
                     <li>
-                      <input id="filter_manage" type="checkbox" checked readOnly className="hidden peer" />
+                      <input
+                        id="filter_manage"
+                        type="checkbox"
+                        checked={visibleCols.manage}
+                        onChange={() => setVisibleCols((v) => ({ ...v, manage: !v.manage }))}
+                        className="hidden peer"
+                      />
                       <label htmlFor="filter_manage" className="flex w-full px-4 py-2 rounded-b-lg select-none peer-checked:bg-blue-300 cursor-pointer"> Manage </label>
                     </li>
                   </ul>
@@ -365,12 +461,12 @@ const Stock = () => {
               <thead className="text-xs text-white uppercase bg-[#3c8c2c]">
                 <tr>
                   <th className="px-4 py-2 rounded-tl-lg">#</th>
-                  <th className="px-4 py-2">Item Code</th>
-                  <th className="px-4 py-2">Item Name</th>
-                  <th className="px-4 py-2">Category</th>
-                  <th className="px-4 py-2 text-right">Quantity</th>
+                  {visibleCols.item_code ? <th className="px-4 py-2">Item Code</th> : null}
+                  {visibleCols.item_name ? <th className="px-4 py-2">Item Name</th> : null}
+                  {visibleCols.category ? <th className="px-4 py-2">Category</th> : null}
+                  {visibleCols.quantity ? <th className="px-4 py-2 text-right">Quantity</th> : null}
                   <th className="px-4 py-2">Unit Type</th>
-                  <th className="px-4 py-2 rounded-tr-lg">Manage</th>
+                  {visibleCols.manage ? <th className="px-4 py-2 rounded-tr-lg">Manage</th> : <th className="px-4 py-2 rounded-tr-lg"></th>}
                 </tr>
               </thead>
               <tbody>
@@ -385,19 +481,23 @@ const Stock = () => {
                 ) : rows.map((row, idx) => (
                   <tr key={row.id} className="text-black bg-white border-b">
                     <td className="px-4 py-2 font-medium whitespace-nowrap">{offset + idx + 1}</td>
-                    <td className="px-4 py-2">{row.item_code}</td>
-                    <td className="px-4 py-2">{row.item_name}</td>
-                    <td className="px-4 py-2">
-                      {categories.find((c) => String(c.id) === String(row.item_categories_id))?.categories || row.item_categories_id || ''}
-                    </td>
-                    <td className="px-4 py-2 text-right">{row.quantity}</td>
+                    {visibleCols.item_code ? <td className="px-4 py-2">{row.item_code}</td> : null}
+                    {visibleCols.item_name ? <td className="px-4 py-2">{row.item_name}</td> : null}
+                    {visibleCols.category ? (
+                      <td className="px-4 py-2">
+                        {categories.find((c) => String(c.id) === String(row.item_categories_id))?.categories || row.item_categories_id || ''}
+                      </td>
+                    ) : null}
+                    {visibleCols.quantity ? <td className="px-4 py-2 text-right">{row.quantity}</td> : null}
                     <td className="px-4 py-2">{row.unit_type_id ?? ''}</td>
-                    <td className="px-4 py-2">
-                      <div className="flex flex-wrap gap-3">
-                        <button onClick={() => handleAddStock(row.id)} className="p-2 border rounded-md bg-blue-100">Add Stock</button>
-                        <button onClick={() => handleViewRelatedStock(row.id)} className="p-2 border rounded-md bg-green-100">View Related Stocks</button>
-                      </div>
-                    </td>
+                    {visibleCols.manage ? (
+                      <td className="px-4 py-2">
+                        <div className="flex flex-wrap gap-3">
+                          <button onClick={() => handleAddStock(row.id)} className="p-2 border rounded-md bg-blue-100">Add Stock</button>
+                          <button onClick={() => handleViewRelatedStock(row.id)} className="p-2 border rounded-md bg-green-100">View Related Stocks</button>
+                        </div>
+                      </td>
+                    ) : <td className="px-4 py-2"></td>}
                   </tr>
                 ))}
               </tbody>

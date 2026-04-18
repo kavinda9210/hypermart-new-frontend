@@ -1,15 +1,67 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import './AddPermission.css';
 import Layout from '../../../components/Layout';
 import { useNavigate } from 'react-router-dom';
 
 const AddPermission = () => {
   const navigate = useNavigate();
+  const [permission, setPermission] = useState('');
+  const [loading, setLoading] = useState(false);
 
   // Handler for cancel button
   const handleCancel = () => {
     navigate('/users/users');
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    const token = localStorage.getItem('token');
+    if (!token) {
+      localStorage.removeItem('user');
+      window.location.assign('/');
+      return;
+    }
+
+    const name = String(permission || '').trim();
+    if (!name) {
+      alert('Permission is required.');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const resp = await fetch('/api/users/permissions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ permissions_name: name }),
+      });
+
+      const data = await resp.json().catch(() => ({}));
+
+      if (resp.status === 401) {
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+        window.location.assign('/');
+        return;
+      }
+
+      if (!resp.ok) {
+        alert(data?.error || 'Failed to create permission.');
+        return;
+      }
+
+      setPermission('');
+      alert('Permission created successfully!');
+      navigate('/users/add_permission');
+    } catch {
+      alert('Network error. Please try again.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -56,16 +108,35 @@ const AddPermission = () => {
         {/* Main panel */}
         <div className="p-6">
           <div className="flex flex-col flex-grow h-full p-6 border-2 rounded-lg bg-white">
-            <form className="w-full">
+            <form className="w-full" onSubmit={handleSubmit}>
               <div className="grid gap-6 mb-6 md:grid-cols-1">
                 <div>
                   <label htmlFor="permission" className="block mb-2 text-sm font-medium text-black">Permission</label>
-                  <input id="permission" name="permission" type="text" className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5" placeholder="Enter permission" required />
+                  <input
+                    id="permission"
+                    name="permission"
+                    type="text"
+                    value={permission}
+                    onChange={(e) => setPermission(e.target.value)}
+                    className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
+                    placeholder="Enter permission"
+                    required
+                    disabled={loading}
+                  />
                 </div>
               </div>
               <div className="flex items-center justify-center w-full gap-4 max-sm:flex-col max-sm:p-0">
-                <button type="submit" className="py-3 px-6 bg-[#3c8c2c] text-white rounded-lg max-sm:py-1 max-sm:px-3 max-sm:w-full">Add</button>
-                <button type="reset" className="px-6 py-3 text-white bg-[#3c8c2c] rounded-lg max-sm:py-1 max-sm:px-3 max-sm:w-full">Reset</button>
+                <button type="submit" className="py-3 px-6 bg-[#3c8c2c] text-white rounded-lg max-sm:py-1 max-sm:px-3 max-sm:w-full" disabled={loading}>
+                  {loading ? 'Adding…' : 'Add'}
+                </button>
+                <button
+                  type="button"
+                  className="px-6 py-3 text-white bg-[#3c8c2c] rounded-lg max-sm:py-1 max-sm:px-3 max-sm:w-full"
+                  onClick={() => setPermission('')}
+                  disabled={loading}
+                >
+                  Reset
+                </button>
                 <button type="button" className="px-6 py-3 text-white bg-red-600 rounded-lg max-sm:py-1 max-sm:px-3 max-sm:w-full" onClick={handleCancel}>Cancel</button>
               </div>
             </form>

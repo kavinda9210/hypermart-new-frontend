@@ -1,5 +1,5 @@
 
-import React, { useState, useRef } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import Layout from '../../../components/Layout';
 import './PermissionList.css';
 import * as XLSX from 'xlsx';
@@ -13,19 +13,14 @@ const allColumns = [
   { key: 'manage', label: 'Manage' },
 ];
 
-const staticPermissions = [
-  { id: 1, permission: 'dashboards' },
-  { id: 2, permission: 'users' },
-  { id: 3, permission: 'sales' },
-  { id: 4, permission: 'items' },
-];
-
 const PermissionList = () => {
   const navigate = useNavigate();
   const canUpdatePermission = hasAllPermissions('Access_Users', 'Permission Update');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
   const [search, setSearch] = useState('');
   const [entries, setEntries] = useState(30);
-  const [permissions, setPermissions] = useState(staticPermissions);
+  const [permissions, setPermissions] = useState([]);
   const [visibleCols, setVisibleCols] = useState(allColumns.map(col => col.key));
   const [popoverOpen, setPopoverOpen] = useState(false);
   const popoverRef = useRef(null);
@@ -35,12 +30,36 @@ const PermissionList = () => {
     p.permission.toLowerCase().includes(search.toLowerCase())
   ).slice(0, entries);
 
-  
+  useEffect(() => {
+    const token = localStorage.getItem('token');
+    if (!token) {
+      localStorage.removeItem('user');
+      window.location.assign('/');
+      return;
+    }
 
-  const handleEditButton = (e) => {
-    e.preventDefault();
-    navigate(`/users/edit_permission`);
-  };
+    setLoading(true);
+    setError('');
+    fetch('/api/users/permissions', {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+      .then(async (res) => {
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(data?.error || 'Failed to load permissions');
+        return data;
+      })
+      .then((data) => {
+        const rows = Array.isArray(data?.permissions) ? data.permissions : [];
+        setPermissions(
+          rows.map((p) => ({
+            id: Number(p.id),
+            permission: String(p.permissions_name || ''),
+          }))
+        );
+      })
+      .catch((err) => setError(String(err?.message || 'Failed to load permissions')))
+      .finally(() => setLoading(false));
+  }, []);
 
   // Copy to clipboard
   const handleCopy = () => {
@@ -229,7 +248,16 @@ const PermissionList = () => {
                     )}
                     {canUpdatePermission && visibleCols.includes('manage') && (
                       <td className="px-4 py-2">
-                        <button className="p-2 border-2 rounded-lg" onClick={handleEditButton}>Edit</button>
+                        <button
+                          className="p-2 border-2 rounded-lg"
+                          type="button"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            navigate(`/users/edit_permission/${encodeURIComponent(String(p.id))}`);
+                          }}
+                        >
+                          Edit
+                        </button>
                         <button className="hidden p-2 text-white bg-red-600 border-2 rounded-lg" disabled>Delete</button>
                       </td>
                     )}
@@ -237,6 +265,12 @@ const PermissionList = () => {
                 ))}
               </tbody>
             </table>
+            {loading ? (
+              <div className="py-3 text-sm text-gray-600">Loading…</div>
+            ) : null}
+            {error ? (
+              <div className="py-3 text-sm text-red-600">{error}</div>
+            ) : null}
           </div>
         </div>
        

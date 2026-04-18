@@ -199,15 +199,15 @@ const Stock = () => {
 
   const navigate = useNavigate();
 
-  const handleAddStock = (e) => {
-    e.preventDefault();
-    navigate('/stock/update_stock');
+  const handleAddStock = (itemId) => {
+    if (!itemId) return;
+    navigate(`/stock/update_stock?id=${encodeURIComponent(String(itemId))}`);
   };
 
-  const handleViewRelatedStock = (e) => {   
-    e.preventDefault();
-    navigate('/stock/view_related_stock');
- };  
+  const handleViewRelatedStock = (itemId) => {
+    if (!itemId) return;
+    navigate(`/stock/view_related_stock?id=${encodeURIComponent(String(itemId))}`);
+  };  
     
 
 
@@ -394,8 +394,8 @@ const Stock = () => {
                     <td className="px-4 py-2">{row.unit_type_id ?? ''}</td>
                     <td className="px-4 py-2">
                       <div className="flex flex-wrap gap-3">
-                        <button onClick={handleAddStock} className="p-2 border rounded-md bg-blue-100">Add Stock</button>
-                        <button onClick={handleViewRelatedStock} className="p-2 border rounded-md bg-green-100">View Related Stocks</button>
+                        <button onClick={() => handleAddStock(row.id)} className="p-2 border rounded-md bg-blue-100">Add Stock</button>
+                        <button onClick={() => handleViewRelatedStock(row.id)} className="p-2 border rounded-md bg-green-100">View Related Stocks</button>
                       </div>
                     </td>
                   </tr>

@@ -1,15 +1,200 @@
-import React from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import Layout from '../../../components/Layout';
 import './updateStock.css';
+import { useLocation, useNavigate } from 'react-router-dom';
 
 const UpdateStock = () => {
+	const navigate = useNavigate();
+	const location = useLocation();
+
+	const token = useMemo(() => localStorage.getItem('token'), []);
+
+	const itemId = useMemo(() => {
+		const params = new URLSearchParams(location.search || '');
+		const id = params.get('id');
+		return id ? String(id).trim() : '';
+	}, [location.search]);
+
+	const [item, setItem] = useState(null);
+	const [updates, setUpdates] = useState([]);
+	const [loading, setLoading] = useState(false);
+	const [submitting, setSubmitting] = useState(false);
+	const [error, setError] = useState('');
+
+	const [quantity, setQuantity] = useState('');
+	const [purchasePrice, setPurchasePrice] = useState('');
+	const [retailPrice, setRetailPrice] = useState('');
+	const [wholesalePrice, setWholesalePrice] = useState('');
+	const [note, setNote] = useState('');
+	const [receivedAt, setReceivedAt] = useState(() => {
+		const d = new Date();
+		const pad = (n) => String(n).padStart(2, '0');
+		return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+	});
+
+	const ensureToken = () => {
+		const t = localStorage.getItem('token');
+		if (!t) {
+			localStorage.removeItem('user');
+			window.location.assign('/');
+			return null;
+		}
+		return t;
+	};
+
+	const resetFormToItemDefaults = (nextItem) => {
+		setQuantity('');
+		setNote('');
+		setPurchasePrice(nextItem?.purchase_price != null ? String(nextItem.purchase_price) : '');
+		setRetailPrice(nextItem?.retail_price != null ? String(nextItem.retail_price) : '');
+		setWholesalePrice(nextItem?.wholesale_price != null ? String(nextItem.wholesale_price) : '');
+		const d = new Date();
+		const pad = (n) => String(n).padStart(2, '0');
+		setReceivedAt(`${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`);
+	};
+
+	useEffect(() => {
+		if (!itemId) {
+			navigate('/stock/stock');
+			return;
+		}
+
+		const load = async () => {
+			setLoading(true);
+			setError('');
+			try {
+				const t = ensureToken();
+				if (!t) return;
+
+				const [itemResp, updatesResp] = await Promise.all([
+					fetch(`/api/items/${encodeURIComponent(itemId)}`, { headers: { Authorization: `Bearer ${t}` } }),
+					fetch(`/api/stock/${encodeURIComponent(itemId)}/updates`, { headers: { Authorization: `Bearer ${t}` } }),
+				]);
+
+				if (itemResp.status === 401 || updatesResp.status === 401) {
+					localStorage.removeItem('token');
+					localStorage.removeItem('user');
+					window.location.assign('/');
+					return;
+				}
+
+				const itemData = await itemResp.json().catch(() => ({}));
+				const updatesData = await updatesResp.json().catch(() => ({}));
+
+				if (!itemResp.ok) {
+					setItem(null);
+					setUpdates([]);
+					setError(itemData?.error || 'Failed to load item.');
+					return;
+				}
+
+				const nextItem = itemData?.item || null;
+				setItem(nextItem);
+				resetFormToItemDefaults(nextItem);
+
+				setUpdates(Array.isArray(updatesData?.updates) ? updatesData.updates : []);
+			} catch {
+				setError('Failed to load data.');
+				setItem(null);
+				setUpdates([]);
+			} finally {
+				setLoading(false);
+			}
+		};
+
+		load();
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, [itemId]);
+
+	const handleSubmit = async (e) => {
+		e.preventDefault();
+		setError('');
+		if (!itemId) return;
+
+		const qty = Number(quantity);
+		if (!Number.isFinite(qty) || qty <= 0) {
+			setError('Please enter a valid stock quantity.');
+			return;
+		}
+
+		const body = {
+			quantity: qty,
+			purchase_price: purchasePrice === '' ? undefined : Number(purchasePrice),
+			retail_price: retailPrice === '' ? undefined : Number(retailPrice),
+			wholesale_price: wholesalePrice === '' ? undefined : Number(wholesalePrice),
+			note: note === '' ? undefined : note,
+			received_at: receivedAt ? new Date(receivedAt).toISOString() : undefined,
+		};
+
+		if (body.purchase_price !== undefined && !Number.isFinite(body.purchase_price)) {
+			setError('Invalid purchase price.');
+			return;
+		}
+		if (body.retail_price !== undefined && !Number.isFinite(body.retail_price)) {
+			setError('Invalid retail price.');
+			return;
+		}
+		if (body.wholesale_price !== undefined && !Number.isFinite(body.wholesale_price)) {
+			setError('Invalid wholesale price.');
+			return;
+		}
+
+		setSubmitting(true);
+		try {
+			const t = ensureToken();
+			if (!t) return;
+
+			const resp = await fetch(`/api/stock/${encodeURIComponent(itemId)}/updates`, {
+				method: 'POST',
+				headers: {
+					'Content-Type': 'application/json',
+					Authorization: `Bearer ${t}`,
+				},
+				body: JSON.stringify(body),
+			});
+			const data = await resp.json().catch(() => ({}));
+			if (resp.status === 401) {
+				localStorage.removeItem('token');
+				localStorage.removeItem('user');
+				window.location.assign('/');
+				return;
+			}
+			if (!resp.ok) {
+				setError(data?.error || 'Failed to add stock.');
+				return;
+			}
+
+			// Refresh item + updates.
+			const [itemResp, updatesResp] = await Promise.all([
+				fetch(`/api/items/${encodeURIComponent(itemId)}`, { headers: { Authorization: `Bearer ${t}` } }),
+				fetch(`/api/stock/${encodeURIComponent(itemId)}/updates`, { headers: { Authorization: `Bearer ${t}` } }),
+			]);
+			const itemData = await itemResp.json().catch(() => ({}));
+			const updatesData = await updatesResp.json().catch(() => ({}));
+			const nextItem = itemData?.item || null;
+			setItem(nextItem);
+			setUpdates(Array.isArray(updatesData?.updates) ? updatesData.updates : []);
+			resetFormToItemDefaults(nextItem);
+		} catch {
+			setError('Failed to add stock.');
+		} finally {
+			setSubmitting(false);
+		}
+	};
+
+	const formatDateTime = (v) => {
+		if (!v) return '—';
+		const d = new Date(v);
+		return Number.isNaN(d.getTime()) ? String(v) : d.toLocaleString();
+	};
+
 	return (
 		<Layout>
 			<div className="min-h-dvh max-lg:h-fit flex flex-col h-fit bg-white">
 				{/* Navigation Bar */}
 				
 				{/* Loading Overlay (UI only) */}
-				<div className="loading-overlay" style={{ display: 'none' }}>
+				<div className="loading-overlay" style={{ display: loading || submitting ? 'flex' : 'none' }}>
 					<div className="text-center">
 						<div className="spinner"></div>
 					</div>
@@ -48,35 +233,38 @@ const UpdateStock = () => {
 				{/* Main Form Panel */}
 				<div className="px-6 lg:px-12">
 					<div className="flex flex-col flex-grow h-full p-6 border-2 rounded-lg">
-						<form className="w-full">
+						{error ? (
+							<p className="mb-4 text-sm text-red-600">{error}</p>
+						) : null}
+						<form className="w-full" onSubmit={handleSubmit}>
 							<div className="grid gap-6 mb-6 md:grid-cols-2">
 								<div>
 									<label htmlFor="name" className="block mb-2 text-sm font-medium text-black">Item Name</label>
-									<input id="name" type="text" value="test" className="bg-gray-200 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5" readOnly />
+									<input id="name" type="text" value={item?.item_name ?? ''} className="bg-gray-200 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5" readOnly />
 								</div>
 								<div>
 									<label htmlFor="code" className="block mb-2 text-sm font-medium text-black">Item Code</label>
-									<input id="code" type="text" value="1001" className="bg-gray-200 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5" readOnly />
+									<input id="code" type="text" value={item?.item_code ?? ''} className="bg-gray-200 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5" readOnly />
 								</div>
 							</div>
 							<div className="grid gap-6 mb-6 md:grid-cols-2">
 								<div>
 									<label htmlFor="minqty" className="block mb-2 text-sm font-medium text-black">Minimum Quantity</label>
-									<input id="minqty" type="text" value="10" className="bg-gray-200 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5" readOnly />
+									<input id="minqty" type="text" value={item?.minimum_qty ?? ''} className="bg-gray-200 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5" readOnly />
 								</div>
 								<div>
 									<label htmlFor="cqty" className="block mb-2 text-sm font-medium text-black">Current Quantity</label>
-									<input id="cqty" type="text" value="10000" className="bg-gray-200 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5" readOnly />
+									<input id="cqty" type="text" value={item?.quantity ?? ''} className="bg-gray-200 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5" readOnly />
 								</div>
 							</div>
 							<div className="grid gap-6 mb-6 md:grid-cols-3">
 								<div>
 									<label htmlFor="unit_type" className="block mb-2 text-sm font-medium text-black">Unit Type</label>
-									<input id="unit_type" type="text" value="Pieces" className="bg-gray-200 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5" placeholder="Unit type" readOnly />
+									<input id="unit_type" type="text" value={item?.unit_type_id ?? ''} className="bg-gray-200 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5" placeholder="Unit type" readOnly />
 								</div>
 								<div>
 									<label htmlFor="quantity" className="block mb-2 text-sm font-medium text-black">Stock Quantity *</label>
-									<input id="quantity" type="number" min="0.01" step="0.01" className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5" placeholder="Enter quantity" required />
+									<input id="quantity" type="number" min="0.01" step="0.01" className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5" placeholder="Enter quantity" required value={quantity} onChange={(e) => setQuantity(e.target.value)} />
 								</div>
 								<div style={{ display: 'none' }} id="exp_date_container" className="flex max-sm:flex-col gap-3">
 									<div>
@@ -91,7 +279,7 @@ const UpdateStock = () => {
 								</div>
 								<div>
 									<label htmlFor="received_at" className="block mb-2 text-sm font-medium text-black">Received Date & Time</label>
-									<input id="received_at" type="datetime-local" className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5" value="2026-04-09T11:36" />
+									<input id="received_at" type="datetime-local" className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5" value={receivedAt} onChange={(e) => setReceivedAt(e.target.value)} />
 								</div>
 							</div>
 							<div className="mb-4">
@@ -99,21 +287,21 @@ const UpdateStock = () => {
 								<div className="grid gap-6 mb-6 md:grid-cols-3">
 									<div>
 										<label htmlFor="purchase_price" className="block mb-2 text-sm font-medium text-black">Purchase Price *</label>
-										<input type="number" id="purchase_price" step="0.01" min="0" className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5" placeholder="Enter purchase price" required value="1000.00" />
+										<input type="number" id="purchase_price" step="0.01" min="0" className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5" placeholder="Enter purchase price" required value={purchasePrice} onChange={(e) => setPurchasePrice(e.target.value)} />
 									</div>
 									<div>
 										<label htmlFor="retail_price" className="block mb-2 text-sm font-medium text-black">Retail Price *</label>
-										<input type="number" id="retail_price" step="0.01" min="0" className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5" placeholder="Enter purchase price" required value="1000.00" />
+										<input type="number" id="retail_price" step="0.01" min="0" className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5" placeholder="Enter purchase price" required value={retailPrice} onChange={(e) => setRetailPrice(e.target.value)} />
 									</div>
 									<div>
 										<label htmlFor="wholesale_price" className="block mb-2 text-sm font-medium text-black">Wholesale Price</label>
-										<input type="number" id="wholesale_price" step="0.01" min="0" className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5" placeholder="Enter wholesale price" value="10000.00" />
+										<input type="number" id="wholesale_price" step="0.01" min="0" className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5" placeholder="Enter wholesale price" value={wholesalePrice} onChange={(e) => setWholesalePrice(e.target.value)} />
 									</div>
 								</div>
 							</div>
 							<div>
 								<label htmlFor="note" className="block mb-2 text-sm font-medium text-black">Note</label>
-								<input id="note" type="text" className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 mb-6" placeholder="Enter note" />
+								<input id="note" type="text" className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 mb-6" placeholder="Enter note" value={note} onChange={(e) => setNote(e.target.value)} />
 							</div>
 							{/* Supplier Selection (hidden) */}
 							<div className="mb-6 custom-select" style={{ display: 'none' }}>
@@ -136,9 +324,16 @@ const UpdateStock = () => {
 								{/* ...Invoice Section UI omitted for brevity... */}
 							</div>
 							<div className="flex items-center justify-center w-full gap-4 max-sm:flex-col max-sm:p-0">
-								<button type="submit" className="py-3 px-6 bg-[#029ED9] text-white rounded-lg max-sm:py-1 max-sm:px-3 max-sm:w-full">Add</button>
-								<button type="reset" className="px-6 py-3 text-white bg-[#3c8c2c] rounded-lg max-sm:py-1 max-sm:px-3 max-sm:w-full">Reset</button>
-								<button type="button" className="px-6 py-3 text-white bg-red-600 rounded-lg max-sm:py-1 max-sm:px-3 max-sm:w-full">Cancel</button>
+								<button type="submit" disabled={submitting || loading} className="py-3 px-6 bg-[#029ED9] text-white rounded-lg max-sm:py-1 max-sm:px-3 max-sm:w-full">Add</button>
+								<button
+									type="button"
+									disabled={submitting || loading}
+									className="px-6 py-3 text-white bg-[#3c8c2c] rounded-lg max-sm:py-1 max-sm:px-3 max-sm:w-full"
+									onClick={() => resetFormToItemDefaults(item)}
+								>
+									Reset
+								</button>
+								<button type="button" className="px-6 py-3 text-white bg-red-600 rounded-lg max-sm:py-1 max-sm:px-3 max-sm:w-full" onClick={() => navigate('/stock/stock')}>Cancel</button>
 							</div>
 						</form>
 					</div>
@@ -167,38 +362,28 @@ const UpdateStock = () => {
 								</tr>
 							</thead>
 							<tbody>
-								<tr className="text-black bg-white border-2">
-									<td className="px-6 py-4 font-medium whitespace-nowrap">2</td>
-									<td className="px-6 py-4">1001</td>
-									<td className="px-6 py-4">test</td>
-									<td className="px-6 py-4">199</td>
-									<td className="px-6 py-4">10000</td>
-									<td className="px-6 py-4"><span className="text-green-700 font-semibold">10000.00</span></td>
-									<td className="px-6 py-4">1,200.00</td>
-									<td className="px-6 py-4 font-semibold text-blue-700">1,500.00</td>
-									<td className="px-6 py-4">1,300.00</td>
-									<td>—</td>
-									<td className="px-6 py-4">—</td>
-									<td className="px-6 py-4">—</td>
-									<td className="px-6 py-4">Mar 25, 2026 00:02</td>
-									<td className="px-6 py-4">test</td>
-								</tr>
-								<tr className="text-black bg-white border-2">
-									<td className="px-6 py-4 font-medium whitespace-nowrap">1</td>
-									<td className="px-6 py-4">1001</td>
-									<td className="px-6 py-4">test</td>
-									<td className="px-6 py-4">—</td>
-									<td className="px-6 py-4">10000</td>
-									<td className="px-6 py-4"><span className="text-green-700 font-semibold">10000.00</span></td>
-									<td className="px-6 py-4">1,000.00</td>
-									<td className="px-6 py-4 font-semibold text-blue-700">1,000.00</td>
-									<td className="px-6 py-4">10,000.00</td>
-									<td>—</td>
-									<td className="px-6 py-4">—</td>
-									<td className="px-6 py-4">Mar 26, 2026</td>
-									<td className="px-6 py-4">Mar 24, 2026 23:53</td>
-									<td className="px-6 py-4">Initial stock added for new item.</td>
-								</tr>
+								{updates.length === 0 ? (
+									<tr className="text-black bg-white border-2">
+										<td className="px-6 py-4 text-center" colSpan={14}>No stock updates found</td>
+									</tr>
+								) : updates.map((u, idx) => (
+									<tr key={u.id ?? idx} className="text-black bg-white border-2">
+										<td className="px-6 py-4 font-medium whitespace-nowrap">{updates.length - idx}</td>
+										<td className="px-6 py-4">{item?.item_code ?? '—'}</td>
+										<td className="px-6 py-4">{item?.item_name ?? '—'}</td>
+										<td className="px-6 py-4">{u.batch_no || '—'}</td>
+										<td className="px-6 py-4">{u.stock ?? '—'}</td>
+										<td className="px-6 py-4"><span className="text-green-700 font-semibold">{u.remaining_stock ?? '—'}</span></td>
+										<td className="px-6 py-4">{u.purchase_price ?? '—'}</td>
+										<td className="px-6 py-4 font-semibold text-blue-700">{u.retail_price ?? '—'}</td>
+										<td className="px-6 py-4">{u.wholesale_price ?? '—'}</td>
+										<td className="px-6 py-4">{u.supplier_name || '—'}</td>
+										<td className="px-6 py-4">{u.invoice_ref || u.supplier_invoice_reference_number || u.supplier_invoice_code || '—'}</td>
+										<td className="px-6 py-4">{u.exp_date || '—'}</td>
+										<td className="px-6 py-4">{formatDateTime(u.received_at || u.created_at)}</td>
+										<td className="px-6 py-4">{u.note || '—'}</td>
+									</tr>
+								))}
 							</tbody>
 						</table>
 					</div>

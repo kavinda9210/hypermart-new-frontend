@@ -47,7 +47,8 @@ const AddRole = () => {
         setError(data.error || 'Failed to add role.');
       } else {
         setRole('');
-        navigate('/users/users');
+        alert('Role added successfully!');
+        navigate('/users/add_role');
       }
     } catch (err) {
       setError('Network error.');

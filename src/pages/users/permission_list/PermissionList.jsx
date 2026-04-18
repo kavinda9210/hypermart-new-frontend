@@ -6,6 +6,7 @@ import * as XLSX from 'xlsx';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { useNavigate } from 'react-router-dom';
+import { hasAllPermissions } from '../../../utils/permissions';
 
 const allColumns = [
   { key: 'permission', label: 'Permission' },
@@ -21,6 +22,7 @@ const staticPermissions = [
 
 const PermissionList = () => {
   const navigate = useNavigate();
+  const canUpdatePermission = hasAllPermissions('Access_Users', 'Permission Update');
   const [search, setSearch] = useState('');
   const [entries, setEntries] = useState(30);
   const [permissions, setPermissions] = useState(staticPermissions);
@@ -213,7 +215,7 @@ const PermissionList = () => {
                       }>{col.label}</th>
                     ) : null
                   )}
-                  {visibleCols.includes('manage') && <th className="px-4 py-2 rounded-tr-lg">Manage</th>}
+                  {canUpdatePermission && visibleCols.includes('manage') && <th className="px-4 py-2 rounded-tr-lg">Manage</th>}
                 </tr>
               </thead>
               <tbody>
@@ -225,7 +227,7 @@ const PermissionList = () => {
                         <td key={col.key} className="px-4 py-2">{p[col.key]}</td>
                       ) : null
                     )}
-                    {visibleCols.includes('manage') && (
+                    {canUpdatePermission && visibleCols.includes('manage') && (
                       <td className="px-4 py-2">
                         <button className="p-2 border-2 rounded-lg" onClick={handleEditButton}>Edit</button>
                         <button className="hidden p-2 text-white bg-red-600 border-2 rounded-lg" disabled>Delete</button>

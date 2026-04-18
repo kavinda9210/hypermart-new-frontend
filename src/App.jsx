@@ -233,7 +233,7 @@ function App() {
         <Route path="/users/user_list" element={<RequireAuth><UserList onBackToMain={goToMainPanel} /></RequireAuth>} />
         <Route path="/users/role_list" element={<RequireAuth><RoleList onBackToMain={goToMainPanel} /></RequireAuth>} />
         <Route path="/users/add_role" element={<RequireAuth><AddRole onBackToMain={goToMainPanel} /></RequireAuth>} />
-        <Route path="/users/edit_role" element={<RequireAuth><EditRole onBackToMain={goToMainPanel} /></RequireAuth>} />
+        <Route path="/users/edit_role/:id" element={<RequireAuth><EditRole onBackToMain={goToMainPanel} /></RequireAuth>} />
         <Route path="/users/permission_list" element={<RequireAuth><PermissionList onBackToMain={goToMainPanel} /></RequireAuth>} />
         <Route path="/users/add_permission" element={<RequireAuth><AddPermission onBackToMain={goToMainPanel} /></RequireAuth>} />
         <Route path="/users/edit_permission" element={<RequireAuth><EditPermission onBackToMain={goToMainPanel} /></RequireAuth>} />

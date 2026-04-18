@@ -1,6 +1,7 @@
 import './UsersPage.css';
 import Layout from '../../components/Layout';
 import { useNavigate } from 'react-router-dom';
+import { hasAllPermissions } from '../../utils/permissions';
 
 function UsersPage() {
 
@@ -41,42 +42,54 @@ function UsersPage() {
           {/* Button container */}
           <div className="w-fit max-[375px]:h-fit h-full">
             <div className="grid grid-cols-3 max-sm:grid-cols-2 max-[375px]:grid-cols-1 place-content-center [375px]:justify-items-center h-full gap-6 text-white 2xl:scale-[110%]">
-              <button onClick={handleAddNewUser} className="w-[200px] max-lg:w-[150px] border-2 border-[#1b4f72] h-[200px] max-lg:h-[150px] bg-[#3c8c2c] text-white rounded-lg flex flex-col gap-3 justify-center items-center hover:scale-90 transition-all cursor-pointer focus:outline-none">
-                <div className="flex items-center justify-center w-10 h-10">
-                  <div className="w-20 h-10" style={{background: "url('https://hypermart-new.onlinesytems.com/images/users/addNewUser.png') no-repeat", backgroundSize: 'cover'}}></div>
-                </div>
-                <p className="text-center max-sm:text-sm">Add New User</p>
-              </button>
-              <button onClick={handleAddNewRole} className="w-[200px] max-lg:w-[150px] border-2 border-[#1b4f72] h-[200px] max-lg:h-[150px] bg-[#3c8c2c] text-white rounded-lg flex flex-col gap-3 justify-center items-center hover:scale-90 transition-all cursor-pointer focus:outline-none">
-                <div className="flex items-center justify-center w-10 h-10">
-                  <div className="w-20 h-10" style={{background: "url('https://hypermart-new.onlinesytems.com/images/users/addNewRole.png') no-repeat", backgroundSize: 'cover'}}></div>
-                </div>
-                <p className="text-center max-sm:text-sm">Add New Role</p>
-              </button>
-              <button onClick={handleAddNewPermission} className="w-[200px] max-lg:w-[150px] border-2 border-[#1b4f72] h-[200px] max-lg:h-[150px] bg-[#3c8c2c] text-white rounded-lg flex flex-col gap-3 justify-center items-center hover:scale-90 transition-all cursor-pointer focus:outline-none">
-                <div className="flex items-center justify-center w-10 h-10">
-                  <div className="w-20 h-10" style={{background: "url('https://hypermart-new.onlinesytems.com/images/users/addNewPermission.png') no-repeat", backgroundSize: 'cover'}}></div>
-                </div>
-                <p className="text-center max-sm:text-sm">Add New Permission</p>
-              </button>
-              <button onClick={handleUsersList} className="w-[200px] max-lg:w-[150px] border-2 border-[#1b4f72] h-[200px] max-lg:h-[150px] bg-[#3c8c2c] text-white rounded-lg flex flex-col gap-3 justify-center items-center hover:scale-90 transition-all cursor-pointer focus:outline-none">
-                <div className="flex items-center justify-center w-10 h-10">
-                  <div className="w-20 h-10" style={{background: "url('https://hypermart-new.onlinesytems.com/images/users/userList.png') no-repeat", backgroundSize: 'cover'}}></div>
-                </div>
-                <p className="text-center max-sm:text-sm">Users List</p>
-              </button>
-              <button onClick={handleRolesList} className="w-[200px] max-lg:w-[150px] border-2 border-[#1b4f72] h-[200px] max-lg:h-[150px] bg-[#3c8c2c] text-white rounded-lg flex flex-col gap-3 justify-center items-center hover:scale-90 transition-all cursor-pointer focus:outline-none">
-                <div className="flex items-center justify-center w-10 h-10">
-                  <div className="w-20 h-10" style={{background: "url('https://hypermart-new.onlinesytems.com/images/users/roleList.png') no-repeat", backgroundSize: 'cover'}}></div>
-                </div>
-                <p className="text-center max-sm:text-sm">Roles List</p>
-              </button>
-              <button onClick={handlePermissionList} className="w-[200px] max-lg:w-[150px] border-2 border-[#1b4f72] h-[200px] max-lg:h-[150px] bg-[#3c8c2c] text-white rounded-lg flex flex-col gap-3 justify-center items-center hover:scale-90 transition-all cursor-pointer focus:outline-none">
-                <div className="flex items-center justify-center w-10 h-10">
-                  <div className="w-20 h-10" style={{background: "url('https://hypermart-new.onlinesytems.com/images/users/permissionList.png') no-repeat", backgroundSize: 'cover'}}></div>
-                </div>
-                <p className="text-center max-sm:text-sm">Permission List</p>
-              </button>
+              {hasAllPermissions('Access_Users', 'Add New User') && (
+                <button onClick={handleAddNewUser} className="w-[200px] max-lg:w-[150px] border-2 border-[#1b4f72] h-[200px] max-lg:h-[150px] bg-[#3c8c2c] text-white rounded-lg flex flex-col gap-3 justify-center items-center hover:scale-90 transition-all cursor-pointer focus:outline-none">
+                  <div className="flex items-center justify-center w-10 h-10">
+                    <div className="w-20 h-10" style={{background: "url('https://hypermart-new.onlinesytems.com/images/users/addNewUser.png') no-repeat", backgroundSize: 'cover'}}></div>
+                  </div>
+                  <p className="text-center max-sm:text-sm">Add New User</p>
+                </button>
+              )}
+              {hasAllPermissions('Access_Users', 'Add New Role') && (
+                <button onClick={handleAddNewRole} className="w-[200px] max-lg:w-[150px] border-2 border-[#1b4f72] h-[200px] max-lg:h-[150px] bg-[#3c8c2c] text-white rounded-lg flex flex-col gap-3 justify-center items-center hover:scale-90 transition-all cursor-pointer focus:outline-none">
+                  <div className="flex items-center justify-center w-10 h-10">
+                    <div className="w-20 h-10" style={{background: "url('https://hypermart-new.onlinesytems.com/images/users/addNewRole.png') no-repeat", backgroundSize: 'cover'}}></div>
+                  </div>
+                  <p className="text-center max-sm:text-sm">Add New Role</p>
+                </button>
+              )}
+              {hasAllPermissions('Access_Users', 'Add New Permission') && (
+                <button onClick={handleAddNewPermission} className="w-[200px] max-lg:w-[150px] border-2 border-[#1b4f72] h-[200px] max-lg:h-[150px] bg-[#3c8c2c] text-white rounded-lg flex flex-col gap-3 justify-center items-center hover:scale-90 transition-all cursor-pointer focus:outline-none">
+                  <div className="flex items-center justify-center w-10 h-10">
+                    <div className="w-20 h-10" style={{background: "url('https://hypermart-new.onlinesytems.com/images/users/addNewPermission.png') no-repeat", backgroundSize: 'cover'}}></div>
+                  </div>
+                  <p className="text-center max-sm:text-sm">Add New Permission</p>
+                </button>
+              )}
+              {hasAllPermissions('Access_Users', 'User List View') && (
+                <button onClick={handleUsersList} className="w-[200px] max-lg:w-[150px] border-2 border-[#1b4f72] h-[200px] max-lg:h-[150px] bg-[#3c8c2c] text-white rounded-lg flex flex-col gap-3 justify-center items-center hover:scale-90 transition-all cursor-pointer focus:outline-none">
+                  <div className="flex items-center justify-center w-10 h-10">
+                    <div className="w-20 h-10" style={{background: "url('https://hypermart-new.onlinesytems.com/images/users/userList.png') no-repeat", backgroundSize: 'cover'}}></div>
+                  </div>
+                  <p className="text-center max-sm:text-sm">Users List</p>
+                </button>
+              )}
+              {hasAllPermissions('Access_Users', 'Role List View') && (
+                <button onClick={handleRolesList} className="w-[200px] max-lg:w-[150px] border-2 border-[#1b4f72] h-[200px] max-lg:h-[150px] bg-[#3c8c2c] text-white rounded-lg flex flex-col gap-3 justify-center items-center hover:scale-90 transition-all cursor-pointer focus:outline-none">
+                  <div className="flex items-center justify-center w-10 h-10">
+                    <div className="w-20 h-10" style={{background: "url('https://hypermart-new.onlinesytems.com/images/users/roleList.png') no-repeat", backgroundSize: 'cover'}}></div>
+                  </div>
+                  <p className="text-center max-sm:text-sm">Roles List</p>
+                </button>
+              )}
+              {hasAllPermissions('Access_Users', 'Permission List View') && (
+                <button onClick={handlePermissionList} className="w-[200px] max-lg:w-[150px] border-2 border-[#1b4f72] h-[200px] max-lg:h-[150px] bg-[#3c8c2c] text-white rounded-lg flex flex-col gap-3 justify-center items-center hover:scale-90 transition-all cursor-pointer focus:outline-none">
+                  <div className="flex items-center justify-center w-10 h-10">
+                    <div className="w-20 h-10" style={{background: "url('https://hypermart-new.onlinesytems.com/images/users/permissionList.png') no-repeat", backgroundSize: 'cover'}}></div>
+                  </div>
+                  <p className="text-center max-sm:text-sm">Permission List</p>
+                </button>
+              )}
             </div>
           </div>
         </div>

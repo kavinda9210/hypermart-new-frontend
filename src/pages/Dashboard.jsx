@@ -113,6 +113,19 @@ function Dashboard({
   onStockReports,
   onOpenSettings,
 }) {
+  let permissionNames = [];
+  try {
+    permissionNames = JSON.parse(localStorage.getItem('permissions') || '[]') || [];
+  } catch {
+    permissionNames = [];
+  }
+
+  const hasAnyPermission = (...names) => {
+    if (!Array.isArray(permissionNames) || permissionNames.length === 0) return true;
+    const set = new Set(permissionNames.map((n) => String(n).toLowerCase()));
+    return names.some((n) => set.has(String(n).toLowerCase()));
+  };
+
   const pageOpeners = {
     Items: onOpenItem,
     Stock: onStock,
@@ -133,9 +146,28 @@ function Dashboard({
     cashier: new Set(['Dashboard', 'Billing', 'Sales', 'Due Amount']),
   };
 
-  const itemsToRender = allowedLabelsByRole[role]
-    ? panelItems.filter((i) => allowedLabelsByRole[role].has(i.label))
-    : panelItems;
+  const labelPermissionRules = {
+    Dashboard: () => hasAnyPermission('Access_Dashbord', 'dashboards'),
+    Billing: () => hasAnyPermission('Access_Billing'),
+    Items: () => hasAnyPermission('Access_Items'),
+    'Export Items': () => hasAnyPermission('Access_Items'),
+    Stock: () => hasAnyPermission('Access_Stock'),
+    Sales: () => hasAnyPermission('Access_Sales'),
+    'Due Amount': () => hasAnyPermission('Access Due Amount', 'Access_Sales'),
+    Users: () => hasAnyPermission('Access_Users'),
+    Customer: () => hasAnyPermission('Access_Customers'),
+    Suppliers: () => hasAnyPermission('Access_Suppliers'),
+    Expenses: () => hasAnyPermission('Access_Expenses'),
+    'Finance Management': () => hasAnyPermission('Access_Finance', 'Finance Management'),
+    Reports: () => hasAnyPermission('Access_Reports'),
+    Settings: () => hasAnyPermission('Access_Settings'),
+    'Stock Report': () => hasAnyPermission('Generate Stock Report', 'Access_Reports'),
+  };
+
+  const itemsToRender = panelItems
+    .filter((i) => (typeof labelPermissionRules[i.label] === 'function' ? labelPermissionRules[i.label]() : true))
+    // keep existing cashier fallback too (if role-based restriction is needed)
+    .filter((i) => (allowedLabelsByRole[role] ? allowedLabelsByRole[role].has(i.label) : true));
 
   return (
     <Layout showMainPanelButton={false} showPosButton={false}>

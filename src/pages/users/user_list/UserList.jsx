@@ -3,6 +3,7 @@ import React, { useEffect, useState, useRef } from 'react';
 import Layout from '../../../components/Layout';
 import './UserList.css';
 import { useNavigate } from 'react-router-dom'; 
+import { hasAllPermissions } from '../../../utils/permissions';
 
 import * as XLSX from 'xlsx';
 
@@ -22,6 +23,10 @@ const allColumns = [
 
 const UserList = () => {
   const navigate = useNavigate();
+
+  const canEditUser = hasAllPermissions('Access_Users', 'User Update');
+  const canToggleUserStatus = hasAllPermissions('Access_Users', 'User Status Control');
+  const canManageUser = canEditUser || canToggleUserStatus;
 
   const [search, setSearch] = useState('');
   const [entries, setEntries] = useState(30);
@@ -299,7 +304,7 @@ const UserList = () => {
                       }>{col.label}</th>
                     ) : null
                   )}
-                  {visibleCols.includes('manage') && <th className="px-4 py-2 rounded-tr-lg">Manage</th>}
+                  {canManageUser && visibleCols.includes('manage') && <th className="px-4 py-2 rounded-tr-lg">Manage</th>}
                 </tr>
               </thead>
               <tbody>
@@ -327,25 +332,29 @@ const UserList = () => {
                           </td>
                         ) : null
                       )}
-                      {visibleCols.includes('manage') && (
+                      {canManageUser && visibleCols.includes('manage') && (
                         <td className="px-4 py-2 flex gap-2">
-                          <button
-                            className="p-2 border-2 rounded-lg"
-                            onClick={(e) => handleEdit(e, user.id)}
-                          >
-                            Edit
-                          </button>
-                          <button
-                            className={
-                              'p-2 border-2 rounded-lg text-white ' +
-                              (isActive
-                                ? 'bg-red-600 border-red-600'
-                                : 'bg-green-600 border-green-600')
-                            }
-                            onClick={() => handleToggleStatus(user)}
-                          >
-                            {isActive ? 'Deactivate' : 'Activate'}
-                          </button>
+                          {canEditUser && (
+                            <button
+                              className="p-2 border-2 rounded-lg"
+                              onClick={(e) => handleEdit(e, user.id)}
+                            >
+                              Edit
+                            </button>
+                          )}
+                          {canToggleUserStatus && (
+                            <button
+                              className={
+                                'p-2 border-2 rounded-lg text-white ' +
+                                (isActive
+                                  ? 'bg-red-600 border-red-600'
+                                  : 'bg-green-600 border-green-600')
+                              }
+                              onClick={() => handleToggleStatus(user)}
+                            >
+                              {isActive ? 'Deactivate' : 'Activate'}
+                            </button>
+                          )}
                         </td>
                       )}
                     </tr>

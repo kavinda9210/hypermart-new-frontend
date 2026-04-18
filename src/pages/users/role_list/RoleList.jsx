@@ -5,6 +5,7 @@ import Layout from '../../../components/Layout';
 import './RoleList.css';
 import { exportCopy, exportCSV, exportExcel, exportPDF } from './exportUtils';
 import { useNavigate } from 'react-router-dom';
+import { hasAllPermissions } from '../../../utils/permissions';
 
 const columns = [
   { key: 'id', label: '#' },
@@ -18,6 +19,7 @@ const columns = [
 
 const RoleList = () => {
   const navigate = useNavigate();
+  const canUpdateRole = hasAllPermissions('Access_Users', 'Role Update');
   const [search, setSearch] = useState('');
   const [entries, setEntries] = useState(30);
   const [showModal, setShowModal] = useState(false);
@@ -27,9 +29,9 @@ const RoleList = () => {
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState('');
 
-  const handleManagePermissions = (e) => {
-    e.preventDefault();
-    navigate('/users/edit_role');
+    const handleManagePermissions = (role) => {
+    if (!role?.id) return;
+    navigate(`/users/edit_role/${encodeURIComponent(role.id)}`);
   };
 
   // Local state for modal fields (for OT toggle)
@@ -306,11 +308,18 @@ const RoleList = () => {
             <table id="RoleTable" className="w-full text-sm text-left text-gray-500 rtl:text-right">
               <thead className="text-xs text-white uppercase bg-[#3c8c2c]">
                 <tr>
-                  {columns.map((col) =>
-                    columnVisibility[col.key] && (
+                  {columns.map((col) => {
+                    const visible =
+                      col.key === 'manage'
+                        ? Boolean(canUpdateRole && columnVisibility.manage)
+                        : Boolean(columnVisibility[col.key]);
+
+                    if (!visible) return null;
+
+                    return (
                       <th key={col.key} scope="col" className={`px-3 py-2 ${col.key === 'id' ? 'rounded-tl-lg' : ''} ${col.key === 'manage' ? 'rounded-tr-lg text-end' : ''}`}>{col.label}</th>
-                    )
-                  )}
+                    );
+                  })}
                 </tr>
               </thead>
               <tbody>
@@ -331,10 +340,10 @@ const RoleList = () => {
                     {columnVisibility.hourly_wage && <td className="px-3 py-2">{role.hourly_wage ?? '-'}</td>}
                     {columnVisibility.monthly_salary && <td className="px-3 py-2">{role.monthly_salary ?? '-'}</td>}
                     {columnVisibility.permission_count && <td className="px-3 py-2 text-center">{role.permission_count ?? 0}</td>}
-                    {columnVisibility.manage && (
+                    {canUpdateRole && columnVisibility.manage && (
                       <td className="px-3 py-2 text-end">
                         <button className="p-2 mr-2 text-white bg-blue-600 border-2 rounded-lg" onClick={() => openSalaryModal(role)}>Salary Settings</button>
-                        <button className="p-2 border-2 rounded-lg" onClick={handleManagePermissions}>Manage Permissions</button>
+                        <button className="p-2 border-2 rounded-lg" onClick={() => handleManagePermissions(role)}>Manage Permissions</button>
                       </td>
                     )}
                   </tr>

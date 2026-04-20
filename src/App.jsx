@@ -1,3 +1,4 @@
+import EditExpensePage from './pages/expenses/editExpense/EditExpense';
 import PaymentDetails from './pages/sales/payment_details/PaymentDetails';
 import CustomerInvoice from './pages/sales/customer_invoice/CusomerInvoice';
 import ReturnListView from './pages/sales/return_list_view/ReturnListView';
@@ -290,6 +291,8 @@ function App() {
           }
         />
         <Route path="/expenses/expensesList" element={<RequireAuth><ExpensesList onBackToMain={goToMainPanel} /></RequireAuth>} />
+          <Route path="/expenses/editExpense/:expenseId" element={<RequireAuth><EditExpensePage onBackToMain={goToMainPanel} /></RequireAuth>} />
+
         <Route path="/expenses/expensesCategoryList" element={<RequireAuth><ExpensesCategoryList onBackToMain={goToMainPanel} /></RequireAuth>} />
         {/* Finance Management */}
         <Route path="/finance" element={<RequireAuth><FinancePage onBackToMain={goToMainPanel} /></RequireAuth>} />

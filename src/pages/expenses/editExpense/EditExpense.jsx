@@ -1,6 +1,7 @@
 import React, { useRef, useState, useEffect } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
 import Layout from '../../../components/Layout';
-import './AddExpense.css';
+import '../addExpense/AddExpense.css';
 
 function SearchableSelect({ label, options, value, onChange, placeholder, name, required }) {
   const [search, setSearch] = useState('');
@@ -78,10 +79,15 @@ function SearchableSelect({ label, options, value, onChange, placeholder, name, 
   );
 }
 
-function AddExpense({ onBackToMain }) {
+const EditExpense = (props) => {
+  const navigate = useNavigate();
+  const params = useParams();
+  const expenseId = props.expenseId || params.expenseId;
+  const { onBackToMain } = props;
   const formRef = useRef(null);
   const dateInputRef = useRef(null);
   const [loading, setLoading] = useState(false);
+  const [expense, setExpense] = useState(null);
   const [expenseDate, setExpenseDate] = useState('');
   const [expenseCategory, setExpenseCategory] = useState('');
   const [expenseCategoryOptions, setExpenseCategoryOptions] = useState([
@@ -90,36 +96,77 @@ function AddExpense({ onBackToMain }) {
   const [success, setSuccess] = useState(null);
   const [error, setError] = useState(null);
 
-  // Fetch expense categories from backend
+  // Fetch expense categories from database
   useEffect(() => {
     const fetchCategories = async () => {
       try {
         const response = await fetch('/api/expense-categories');
         if (!response.ok) throw new Error('Failed to fetch categories');
         const data = await response.json();
+        
+        // Transform API response to format needed for SearchableSelect
         const categories = [
           { value: '', label: 'Select expense category' },
           ...(Array.isArray(data) ? data.map(cat => ({
             value: String(cat.id),
-            label: cat.name
+            label: cat.name || cat.category_name
           })) : [])
         ];
         setExpenseCategoryOptions(categories);
       } catch (err) {
         console.error('Error fetching categories:', err);
         setExpenseCategoryOptions([
-          { value: '', label: 'Select expense category' }
+          { value: '', label: 'Select expense category' },
+          { value: '1', label: 'Mortgage' },
+          { value: '2', label: 'Utilities' },
+          { value: '3', label: 'Groceries' },
+          { value: '4', label: 'Transportation' },
+          { value: '5', label: 'Entertainment' },
         ]);
       }
     };
+
     fetchCategories();
   }, []);
 
-  const resetForm = () => {
-    formRef.current?.reset();
-    setExpenseDate('');
-    setExpenseCategory('');
+  // Format date for input field (YYYY-MM-DD)
+  const formatDateForInput = (dateString) => {
+    if (!dateString) return '';
+    if (dateString.match(/^\d{4}-\d{2}-\d{2}$/)) return dateString;
+    try {
+      const date = new Date(dateString);
+      if (isNaN(date.getTime())) return '';
+      return date.toISOString().split('T')[0];
+    } catch {
+      return '';
+    }
   };
+
+  // Fetch expense details
+  useEffect(() => {
+    if (!expenseId) {
+      setError('No expense ID provided');
+      return;
+    }
+    
+    setLoading(true);
+    fetch(`/api/expenses/${expenseId}`)
+      .then(res => {
+        if (!res.ok) throw new Error('Failed to load expense');
+        return res.json();
+      })
+      .then(data => {
+        setExpense(data);
+        const formattedDate = formatDateForInput(data.expense_date);
+        setExpenseDate(formattedDate);
+        setExpenseCategory(data.expense_categories_id ? String(data.expense_categories_id) : '');
+      })
+      .catch(err => {
+        console.error('Error loading expense:', err);
+        setError(err.message || 'Failed to load expense');
+      })
+      .finally(() => setLoading(false));
+  }, [expenseId]);
 
   const handleSubmit = async (event) => {
     event.preventDefault();
@@ -135,29 +182,55 @@ function AddExpense({ onBackToMain }) {
       expense_date: formData.get('expense_date'),
       amount: formData.get('amount'),
       expense_categories_id: expenseCategory || null,
-      user_id: null // Set user_id if available (e.g. from auth)
+      user_id: null
     };
     
     try {
-      const resp = await fetch('/api/expenses', {
-        method: 'POST',
+      const resp = await fetch(`/api/expenses/${expenseId}`, {
+        method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
       });
       
       if (!resp.ok) {
         const data = await resp.json().catch(() => ({}));
-        throw new Error(data.error || 'Failed to add expense');
+        throw new Error(data.error || 'Failed to update expense');
       }
       
-      setSuccess('Expense added successfully!');
-      resetForm();
+      setSuccess('Expense updated successfully!');
+      setTimeout(() => {
+        navigate('/expenses/expensesList');
+      }, 2000);
+      
     } catch (err) {
-      setError(err.message || 'Failed to add expense');
+      setError(err.message || 'Failed to update expense');
     } finally {
       setLoading(false);
     }
   };
+
+  if (loading && !expense) return (
+    <Layout onBackToMain={onBackToMain}>
+      <div className="add-expense-page flex flex-col flex-grow">
+        <div className="flex justify-center items-center h-64">
+          <div className="text-center">
+            <div className="spinner" />
+            <p className="mt-4 text-gray-600">Loading expense details...</p>
+          </div>
+        </div>
+      </div>
+    </Layout>
+  );
+  
+  if (error && !expense) return (
+    <Layout onBackToMain={onBackToMain}>
+      <div className="add-expense-page flex flex-col flex-grow">
+        <div className="p-4 mb-4 text-red-800 rounded-lg bg-red-100 m-6">{error}</div>
+      </div>
+    </Layout>
+  );
+  
+  if (!expense) return null;
 
   return (
     <Layout onBackToMain={onBackToMain}>
@@ -203,7 +276,7 @@ function AddExpense({ onBackToMain }) {
                     <svg className="w-3 h-3 mx-1 text-gray-400 rtl:rotate-180" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 6 10">
                       <path stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="m1 9 4-4-4-4" />
                     </svg>
-                    <p className="text-sm font-medium text-gray-700 ms-1 md:ms-2">Add New Expense</p>
+                    <p className="text-sm font-medium text-gray-700 ms-1 md:ms-2">Edit Expense</p>
                   </div>
                 </li>
               </ol>
@@ -226,7 +299,7 @@ function AddExpense({ onBackToMain }) {
                         id="exp_date_display"
                         type="text"
                         readOnly
-                        value={expenseDate}
+                        value={expenseDate ? new Date(expenseDate).toLocaleDateString('en-US', { year: 'numeric', month: '2-digit', day: '2-digit' }) : ''}
                         placeholder="Select date"
                         className="bg-gray-50 w-full border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block ps-10 p-2.5 cursor-pointer"
                         onClick={() => dateInputRef.current?.showPicker?.() || dateInputRef.current?.click()}
@@ -252,6 +325,7 @@ function AddExpense({ onBackToMain }) {
                       name="expense_title"
                       className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
                       placeholder="Enter expense title"
+                      defaultValue={expense.expense_title}
                       required
                     />
                   </div>
@@ -281,6 +355,7 @@ function AddExpense({ onBackToMain }) {
                       name="amount"
                       className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
                       placeholder="Enter amount"
+                      defaultValue={expense.amount}
                       required
                       step="0.01"
                     />
@@ -295,17 +370,23 @@ function AddExpense({ onBackToMain }) {
                     name="details"
                     className="block p-2.5 w-full text-sm text-gray-900 bg-gray-50 rounded-lg border border-gray-300 focus:ring-blue-500 focus:border-blue-500"
                     placeholder="Enter Details"
+                    defaultValue={expense.details || ''}
                   />
                 </div>
 
                 <div className="flex items-center justify-center w-full gap-4 max-sm:flex-col max-sm:p-0">
-                  <button type="submit" className="py-3 px-6 bg-[#3c8c2c] text-white rounded-lg max-sm:py-1 max-sm:px-3 max-sm:w-full" disabled={loading}>
-                    Add
+                  <button 
+                    type="submit" 
+                    className="py-3 px-6 bg-[#3c8c2c] text-white rounded-lg max-sm:py-1 max-sm:px-3 max-sm:w-full"
+                    disabled={loading}
+                  >
+                    Update
                   </button>
-                  <button type="button" onClick={resetForm} className="px-6 py-3 text-white bg-[#3c8c2c] rounded-lg max-sm:py-1 max-sm:px-3 max-sm:w-full">
-                    Reset
-                  </button>
-                  <button type="button" className="px-6 py-3 text-white bg-red-600 rounded-lg max-sm:py-1 max-sm:px-3 max-sm:w-full" onClick={() => window.location.assign('/expenses/expenses')}>
+                  <button 
+                    type="button" 
+                    onClick={() => navigate('/expenses/expensesList')} 
+                    className="px-6 py-3 text-white bg-red-600 rounded-lg max-sm:py-1 max-sm:px-3 max-sm:w-full"
+                  >
                     Cancel
                   </button>
                 </div>
@@ -318,6 +399,6 @@ function AddExpense({ onBackToMain }) {
       </div>
     </Layout>
   );
-}
+};
 
-export default AddExpense;
+export default EditExpense;

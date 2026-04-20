@@ -4,9 +4,19 @@ import './Banks.css';
 
 const Banks = ({ onBackToMain }) => {
   const [loading, setLoading] = useState(true);
+  const [banks, setBanks] = useState([]);
+  const [error, setError] = useState('');
 
   useEffect(() => {
-    setLoading(false);
+    setLoading(true);
+    fetch('/api/banks')
+      .then(res => {
+        if (!res.ok) throw new Error('Failed to fetch banks');
+        return res.json();
+      })
+      .then(data => setBanks(Array.isArray(data) ? data : []))
+      .catch(() => setError('Failed to load banks'))
+      .finally(() => setLoading(false));
   }, []);
 
   return (
@@ -115,9 +125,31 @@ const Banks = ({ onBackToMain }) => {
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                <tr>
-                  <td colSpan="8" className="px-6 py-4 text-center text-gray-500">No banks found</td>
-                </tr>
+                {loading ? (
+                  <tr>
+                    <td colSpan="8" className="px-6 py-4 text-center text-gray-500">Loading...</td>
+                  </tr>
+                ) : error ? (
+                  <tr>
+                    <td colSpan="8" className="px-6 py-4 text-center text-red-500">{error}</td>
+                  </tr>
+                ) : banks.length === 0 ? (
+                  <tr>
+                    <td colSpan="8" className="px-6 py-4 text-center text-gray-500">No banks found</td>
+                  </tr>
+                ) : (
+                  banks.map((bank, idx) => (
+                    <tr key={bank.id}>
+                      <td className="px-4 py-2">{idx + 1}</td>
+                      <td className="px-4 py-2">{bank.bank_name}</td>
+                      <td className="px-4 py-2">{bank.bank_code}</td>
+                      <td className="px-4 py-2">{bank.contact_number}</td>
+                      <td className="px-4 py-2">-</td>
+                      <td className="px-4 py-2">{bank.is_active ? 'Active' : 'Inactive'}</td>
+                      <td className="px-4 py-2">-</td>
+                    </tr>
+                  ))
+                )}
               </tbody>
             </table>
           </div>

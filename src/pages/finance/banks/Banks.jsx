@@ -146,7 +146,29 @@ const Banks = ({ onBackToMain }) => {
                       <td className="px-4 py-2">{bank.contact_number}</td>
                       <td className="px-4 py-2">-</td>
                       <td className="px-4 py-2">{bank.is_active ? 'Active' : 'Inactive'}</td>
-                      <td className="px-4 py-2">-</td>
+                      <td className="px-4 py-2">
+                        <button
+                          className="px-2 py-1 mr-2 text-xs text-white bg-blue-600 rounded hover:bg-blue-700"
+                          onClick={() => window.location.href = `/finance/banks/edit/${bank.id}`}
+                        >
+                          Edit
+                        </button>
+                        <button
+                          className="px-2 py-1 text-xs text-white bg-red-600 rounded hover:bg-red-700"
+                          onClick={async () => {
+                            if (!window.confirm('Are you sure you want to delete this bank?')) return;
+                            try {
+                              const resp = await fetch(`/api/banks/${bank.id}`, { method: 'DELETE' });
+                              if (!resp.ok) throw new Error('Delete failed');
+                              setBanks(banks.filter(b => b.id !== bank.id));
+                            } catch (e) {
+                              alert('Failed to delete bank');
+                            }
+                          }}
+                        >
+                          Delete
+                        </button>
+                      </td>
                     </tr>
                   ))
                 )}

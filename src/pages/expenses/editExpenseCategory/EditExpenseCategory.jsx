@@ -1,43 +1,51 @@
-import React, { useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
+import { useParams } from 'react-router-dom';
 import Layout from '../../../components/Layout';
-import './AddExpenseCategory.css';
 
-const AddExpenseCategory = ({ onBackToMain }) => {
+const EditExpenseCategory = ({ onBackToMain }) => {
   const formRef = useRef(null);
+  const { id: categoryId } = useParams();
   const [loading, setLoading] = useState(false);
-
-  const resetForm = () => {
-    formRef.current?.reset();
-  };
-
   const [success, setSuccess] = useState(null);
   const [error, setError] = useState(null);
+  const [categoryName, setCategoryName] = useState('');
+
+  useEffect(() => {
+    setLoading(true);
+    fetch(`/api/expense-categories/${categoryId}`)
+      .then(res => {
+        if (!res.ok) throw new Error('Failed to fetch category');
+        return res.json();
+      })
+      .then(data => setCategoryName(data.name || ''))
+      .catch(() => setError('Failed to fetch category'))
+      .finally(() => setLoading(false));
+  }, [categoryId]);
+
+  const resetForm = () => {
+    setCategoryName('');
+    setSuccess(null);
+    setError(null);
+  };
 
   const handleSubmit = async (event) => {
     event.preventDefault();
     setLoading(true);
     setSuccess(null);
     setError(null);
-    const form = event.target;
-    const formData = new FormData(form);
-    const payload = {
-      name: formData.get('name'),
-      // user_id: null // Add if you want to support user_id
-    };
     try {
-      const resp = await fetch('/api/expense-categories', {
-        method: 'POST',
+      const resp = await fetch(`/api/expense-categories/${categoryId}`, {
+        method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
+        body: JSON.stringify({ name: categoryName }),
       });
       if (!resp.ok) {
         const data = await resp.json().catch(() => ({}));
-        throw new Error(data.error || 'Failed to add category');
+        throw new Error(data.error || 'Failed to update category');
       }
-      setSuccess('Expense category added successfully!');
-      resetForm();
+      setSuccess('Expense category updated successfully!');
     } catch (err) {
-      setError(err.message || 'Failed to add category');
+      setError(err.message || 'Failed to update category');
     } finally {
       setLoading(false);
     }
@@ -85,7 +93,7 @@ const AddExpenseCategory = ({ onBackToMain }) => {
                     <svg className="w-3 h-3 mx-1 text-gray-400 rtl:rotate-180" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 6 10">
                       <path stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="m1 9 4-4-4-4" />
                     </svg>
-                    <p className="text-sm font-medium text-gray-700 ms-1 md:ms-2">Add Expense Category</p>
+                    <p className="text-sm font-medium text-gray-700 ms-1 md:ms-2">Edit Expense Category</p>
                   </div>
                 </li>
               </ol>
@@ -95,7 +103,6 @@ const AddExpenseCategory = ({ onBackToMain }) => {
           <div className="px-6 lg:px-12" />
 
           <form ref={formRef} method="POST" action="#" onSubmit={handleSubmit} encType="multipart/form-data" autoComplete="off">
-
             <div className="px-6 lg:px-12">
               <div className="flex flex-col flex-grow h-full p-6 border-2 rounded-lg bg-white">
                 <div className="grid gap-6 mb-6 md:grid-cols-1">
@@ -108,12 +115,14 @@ const AddExpenseCategory = ({ onBackToMain }) => {
                       className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
                       placeholder="Enter expense category"
                       required
+                      value={categoryName}
+                      onChange={e => setCategoryName(e.target.value)}
                     />
                   </div>
                 </div>
 
                 <div className="flex items-center justify-center w-full gap-4 max-sm:flex-col max-sm:p-0">
-                  <button type="submit" className="py-3 px-6 bg-[#3c8c2c] text-white rounded-lg max-sm:py-1 max-sm:px-3 max-sm:w-full">Add</button>
+                  <button type="submit" className="py-3 px-6 bg-[#3c8c2c] text-white rounded-lg max-sm:py-1 max-sm:px-3 max-sm:w-full">Update</button>
                   <button type="button" onClick={resetForm} className="px-6 py-3 text-white bg-[#3c8c2c] rounded-lg max-sm:py-1 max-sm:px-3 max-sm:w-full">Reset</button>
                   <button type="button" className="px-6 py-3 text-white bg-red-600 rounded-lg max-sm:py-1 max-sm:px-3 max-sm:w-full" onClick={() => window.location.assign('/expenses/expenses')}>Cancel</button>
                 </div>
@@ -128,4 +137,4 @@ const AddExpenseCategory = ({ onBackToMain }) => {
   );
 };
 
-export default AddExpenseCategory;
+export default EditExpenseCategory;

@@ -82,6 +82,7 @@ import InvoiceReport from './pages/suppliers/invoice/InvoiceReport';
 import ExpensesPage from './pages/expenses/ExpensesPage';
 import ExpensesList from './pages/expenses/expensesList/ExpensesList';
 import ExpensesCategoryList from './pages/expenses/expensesCategoryList/ExpensesCategoryList';
+import EditExpenseCategory from './pages/expenses/editExpenseCategory/EditExpenseCategory';
 
 const AddExpense = React.lazy(() => import('./pages/expenses/addExpense/AddExpense'));
 const AddExpenseCategory = React.lazy(() => import('./pages/expenses/addExpenseCategory/AddExpenseCategory'));
@@ -294,6 +295,8 @@ function App() {
           <Route path="/expenses/editExpense/:expenseId" element={<RequireAuth><EditExpensePage onBackToMain={goToMainPanel} /></RequireAuth>} />
 
         <Route path="/expenses/expensesCategoryList" element={<RequireAuth><ExpensesCategoryList onBackToMain={goToMainPanel} /></RequireAuth>} />
+        <Route path="/expenses/editExpenseCategory/:id" element={<RequireAuth><EditExpenseCategory /></RequireAuth>} />
+
         {/* Finance Management */}
         <Route path="/finance" element={<RequireAuth><FinancePage onBackToMain={goToMainPanel} /></RequireAuth>} />
         <Route path="/finance/banks" element={<RequireAuth><Banks onBackToMain={goToMainPanel} /></RequireAuth>} />

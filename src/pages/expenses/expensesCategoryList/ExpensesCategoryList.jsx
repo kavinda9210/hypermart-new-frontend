@@ -1,29 +1,38 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import Layout from '../../../components/Layout';
 import './ExpensesCategoryList.css';
 
-const initialRows = [
-  {
-    id: 1,
-    category: 'Mortgage',
-  },
-];
+
 
 const ExpensesCategoryList = () => {
+
   const [searchValue, setSearchValue] = useState('');
+  const navigate = useNavigate();
   const [entries, setEntries] = useState('30');
   const [showAddModal, setShowAddModal] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [categories, setCategories] = useState([]);
+  const [successMsg, setSuccessMsg] = useState('');
+
+  useEffect(() => {
+    setLoading(true);
+    fetch('/api/expense-categories')
+      .then(res => res.json())
+      .then(data => setCategories(Array.isArray(data) ? data : []))
+      .catch(() => setCategories([]))
+      .finally(() => setLoading(false));
+  }, [successMsg]); // reload list after delete
 
   const filteredRows = useMemo(() => {
     const normalizedSearch = searchValue.trim().toLowerCase();
     const limit = Number.parseInt(entries, 10);
     const safeLimit = Number.isFinite(limit) && limit > 0 ? limit : 30;
 
-    return initialRows
-      .filter((row) => row.category.toLowerCase().includes(normalizedSearch))
+    return categories
+      .filter((row) => (row.name || '').toLowerCase().includes(normalizedSearch))
       .slice(0, safeLimit);
-  }, [searchValue, entries]);
+  }, [searchValue, entries, categories]);
 
   const handleSearch = () => {
     setLoading(true);
@@ -140,14 +149,35 @@ const ExpensesCategoryList = () => {
                 {filteredRows.map((row) => (
                   <tr key={row.id} className="text-black bg-white border-2">
                     <td scope="row" className="px-4 py-2 font-medium whitespace-nowrap">{row.id}</td>
-                    <td className="px-4 py-2 name">{row.category}</td>
+                    <td className="px-4 py-2 name">{row.name}</td>
                     <td className="px-4 py-2">
-                      <a href={`/expenses/updateExpenseCategory/${row.id}`}>
-                        <button type="button" className="px-3 py-1 text-xs border-2 rounded-lg">Edit</button>
-                      </a>
-                      <a href={`/expenses/delete/${row.id}`}>
-                        <button type="button" className="px-3 py-1 text-xs text-white bg-red-600 border-2 rounded-lg">Delete</button>
-                      </a>
+                      <button
+                        type="button"
+                        className="px-3 py-1 text-xs border-2 rounded-lg"
+                        onClick={() => navigate(`/expenses/editExpenseCategory/${row.id}`)}
+                      >
+                        Edit
+                      </button>
+                      <button
+                        type="button"
+                        className="px-3 py-1 text-xs text-white bg-red-600 border-2 rounded-lg"
+                        onClick={async () => {
+                          if (!window.confirm('Are you sure you want to delete this category?')) return;
+                          setLoading(true);
+                          try {
+                            const resp = await fetch(`/api/expense-categories/${row.id}`, { method: 'DELETE' });
+                            if (!resp.ok) throw new Error('Delete failed');
+                            setSuccessMsg('Category deleted successfully!');
+                            setTimeout(() => setSuccessMsg(''), 2000);
+                          } catch (e) {
+                            alert('Failed to delete category');
+                          } finally {
+                            setLoading(false);
+                          }
+                        }}
+                      >
+                        Delete
+                      </button>
                     </td>
                   </tr>
                 ))}

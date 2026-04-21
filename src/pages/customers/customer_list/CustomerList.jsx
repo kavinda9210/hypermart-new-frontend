@@ -181,9 +181,9 @@ const CustomerList = () => {
   };
 
   const handleViewTransactions = (e, customerId) => {
-    e.preventDefault();
-    navigate(`/customers/transactions/history/${customerId}`);
-  };
+  e.preventDefault();
+  navigate(`/customers/transactions/history/${customerId}`);
+};
 
   const handleViewTransactionsLog = (e, customerId) => {
     e.preventDefault();

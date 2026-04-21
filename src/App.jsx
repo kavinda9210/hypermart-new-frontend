@@ -252,7 +252,7 @@ function App() {
           <Route path="/customers/transactions/history" element={<RequireAuth><CustomerTransactionHistory onBackToMain={goToMainPanel} /></RequireAuth>} />
           <Route path="/customers/transaction-log" element={<RequireAuth><TransactionLog onBackToMain={goToMainPanel} /></RequireAuth>} />
           <Route path="/customers/balance-transaction-log" element={<RequireAuth><BalanceTransactionLog onBackToMain={goToMainPanel} /></RequireAuth>} />
-
+          <Route path="/customers/transactions/history/:id" element={<RequireAuth><CustomerTransactionHistory onBackToMain={goToMainPanel} /></RequireAuth>} />
         {/* Cheques */}
         <Route path="/cheques" element={<RequireAuth><Cheques onBackToMain={goToMainPanel} /></RequireAuth>} />
         <Route path="/cheques/create" element={<RequireAuth><CreateCheques onBackToMain={goToMainPanel} /></RequireAuth>} />

@@ -73,6 +73,66 @@ const BillModal = ({ billHtml, salesCode, onClose }) => {
   );
 };
 
+// Refresh Modal Component
+const RefreshModal = ({ onRefresh, onCancel }) => {
+  const [countdown, setCountdown] = useState(5);
+  const countdownRef = useRef(null);
+
+  useEffect(() => {
+    countdownRef.current = setInterval(() => {
+      setCountdown(prev => {
+        if (prev <= 1) {
+          clearInterval(countdownRef.current);
+          onRefresh();
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    return () => {
+      if (countdownRef.current) clearInterval(countdownRef.current);
+    };
+  }, [onRefresh]);
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 animate-fadeIn">
+      <div className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4 overflow-hidden animate-slideUp">
+        <div className="bg-blue-500 p-4 text-white text-center">
+          <svg className="w-12 h-12 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+          </svg>
+          <h2 className="text-xl font-bold">Ready for Next Customer!</h2>
+          <p className="text-sm">Refreshing page in {countdown} seconds...</p>
+        </div>
+        <div className="p-4 text-center">
+          <p className="text-gray-600 mb-4">The page will automatically refresh to start a new bill.</p>
+          <div className="flex gap-3 justify-center">
+            <button
+              onClick={onRefresh}
+              className="px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600"
+            >
+              Refresh Now
+            </button>
+            <button
+              onClick={onCancel}
+              className="px-4 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400"
+            >
+              Stay Here
+            </button>
+          </div>
+        </div>
+        <div className="w-full bg-gray-200 h-1">
+          <div 
+            className="bg-blue-500 h-1 animate-progress" 
+            style={{ animationDuration: '5s' }}
+          ></div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 function Billing({ onBackToMain }) {
   // Get token from localStorage
   const getAuthHeaders = () => {
@@ -104,6 +164,7 @@ function Billing({ onBackToMain }) {
   const [billNameError, setBillNameError] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [billData, setBillData] = useState(null);
+  const [showRefreshModal, setShowRefreshModal] = useState(false);
 
   // Customer states
   const [customers, setCustomers] = useState([]);
@@ -138,6 +199,24 @@ function Billing({ onBackToMain }) {
   const [browseOffset, setBrowseOffset] = useState(0);
   const searchInputRef = useRef(null);
   const barcodeInputRef = useRef(null);
+
+  // Auto-refresh function
+  const handleRefresh = () => {
+    window.location.reload();
+  };
+
+  const handleCancelRefresh = () => {
+    setShowRefreshModal(false);
+  };
+
+  // Handle bill modal close and show refresh modal
+  const handleBillModalClose = () => {
+    setBillData(null);
+    // Show refresh modal after bill modal closes
+    setTimeout(() => {
+      setShowRefreshModal(true);
+    }, 500);
+  };
 
   // Close customer dropdown when clicking outside
   useEffect(() => {
@@ -1602,7 +1681,15 @@ function Billing({ onBackToMain }) {
           <BillModal
             billHtml={billData.html}
             salesCode={billData.salesCode}
-            onClose={() => setBillData(null)}
+            onClose={handleBillModalClose}
+          />
+        )}
+
+        {/* Refresh Modal - Shows after bill is printed */}
+        {showRefreshModal && (
+          <RefreshModal
+            onRefresh={handleRefresh}
+            onCancel={handleCancelRefresh}
           />
         )}
       </div>

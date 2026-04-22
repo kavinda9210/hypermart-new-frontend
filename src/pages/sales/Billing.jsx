@@ -1,8 +1,22 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import './Billing.css';
 import Layout from '../../components/Layout';
+import axios from 'axios';
+
+// Backend is running on port 3000
+const API_BASE_URL = 'http://localhost:3000';
 
 function Billing({ onBackToMain }) {
+  // Get token from localStorage
+  const getAuthHeaders = () => {
+    const token = localStorage.getItem('token');
+    return {
+      headers: {
+        'Authorization': `Bearer ${token}`
+      }
+    };
+  };
+
   const paymentSourceOptions = ['Cash Book', 'Cash', 'Card', 'Cheque', 'Credit', 'Bank Transfer'];
   const createPaymentSourceRow = () => ({
     id: `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
@@ -22,28 +36,283 @@ function Billing({ onBackToMain }) {
   const [billName, setBillName] = useState('');
   const [billNameError, setBillNameError] = useState(false);
 
-  const frontendOnlyNotice = (action) => {
-    alert(`Frontend-only mode: ${action}`);
-  };
+  // ========== STATE FOR ITEMS ==========
+  const [cartItems, setCartItems] = useState([]);
+  const [searchResults, setSearchResults] = useState([]);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [isSearching, setIsSearching] = useState(false);
+  const [searchTotal, setSearchTotal] = useState(0);
+  const [browseItems, setBrowseItems] = useState([]);
+  const [isBrowsing, setIsBrowsing] = useState(false);
+  const [browseTotal, setBrowseTotal] = useState(0);
+  const [browseLimit] = useState(60);
+  const [browseOffset, setBrowseOffset] = useState(0);
+  const searchInputRef = useRef(null);
+  const barcodeInputRef = useRef(null);
 
-  const handleToggleFullscreen = async () => {
-    const doc = document;
-    const element = doc.documentElement;
-    const isFullscreen = Boolean(doc.fullscreenElement);
+  // ========== CART CALCULATIONS ==========
+  const calculateTotals = useCallback(() => {
+    const totalItems = cartItems.length;
+    const totalQuantity = cartItems.reduce((sum, item) => sum + (item.quantity || 0), 0);
+    const totalAmount = cartItems.reduce((sum, item) => sum + ((item.price || 0) * (item.quantity || 0)), 0);
+    const totalDiscount = cartItems.reduce((sum, item) => sum + (item.discount_amount || 0), 0);
+    const grandTotal = totalAmount - totalDiscount;
+    
+    return { totalItems, totalQuantity, totalAmount, totalDiscount, grandTotal };
+  }, [cartItems]);
 
+  const totals = calculateTotals();
+
+  // ========== LOAD ITEMS FOR RIGHT PANEL (NO SEARCH) ==========
+  const loadBrowseItems = useCallback(async ({ offset }) => {
+    setIsBrowsing(true);
     try {
-      if (!isFullscreen) {
-        if (element.requestFullscreen) {
-          await element.requestFullscreen();
-        }
-      } else if (doc.exitFullscreen) {
-        await doc.exitFullscreen();
+      const response = await axios.get(`${API_BASE_URL}/api/billing/items`, {
+        ...getAuthHeaders(),
+        params: {
+          pricing_mode: pricingMode,
+          limit: browseLimit,
+          offset,
+          include_out_of_stock: 1,
+        },
+      });
+
+      const items = Array.isArray(response.data.items) ? response.data.items : [];
+      setBrowseItems(items);
+      setBrowseTotal(Number.isFinite(Number(response.data.total)) ? Number(response.data.total) : items.length);
+    } catch (error) {
+      console.error('Browse items error:', error);
+      if (error.response?.status === 401) {
+        localStorage.removeItem('token');
+        window.location.href = '/login';
       }
-    } catch {
-      frontendOnlyNotice('Fullscreen is blocked by the browser');
+      setBrowseItems([]);
+      setBrowseTotal(0);
+    } finally {
+      setIsBrowsing(false);
+    }
+  }, [pricingMode, browseLimit]);
+
+  useEffect(() => {
+    // When pricing mode changes, reset to first page (browseOffset effect will fetch)
+    setBrowseOffset(0);
+  }, [pricingMode]);
+
+  useEffect(() => {
+    loadBrowseItems({ offset: browseOffset });
+  }, [browseOffset, loadBrowseItems]);
+
+  // ========== SEARCH ITEMS FROM BACKEND ==========
+  const searchItems = useCallback(async (search) => {
+    if (!search.trim()) {
+      setSearchResults([]);
+      setSearchTotal(0);
+      return;
+    }
+
+    setIsSearching(true);
+    try {
+      const response = await axios.get(`${API_BASE_URL}/api/billing/search-items`, {
+        ...getAuthHeaders(),
+        params: {
+          search: search.trim(),
+          pricing_mode: pricingMode
+        }
+      });
+
+      if (response.data.items) {
+        setSearchResults(response.data.items);
+        setSearchTotal(Number.isFinite(Number(response.data.total)) ? Number(response.data.total) : response.data.items.length);
+      } else {
+        setSearchResults([]);
+        setSearchTotal(0);
+      }
+    } catch (error) {
+      console.error('Search error:', error);
+      if (error.response?.status === 401) {
+        localStorage.removeItem('token');
+        window.location.href = '/login';
+      }
+      setSearchResults([]);
+      setSearchTotal(0);
+    } finally {
+      setIsSearching(false);
+    }
+  }, [pricingMode]);
+
+  // Debounced search
+  useEffect(() => {
+    const delayDebounce = setTimeout(() => {
+      if (searchTerm) {
+        searchItems(searchTerm);
+      } else {
+        setSearchResults([]);
+      }
+    }, 300);
+
+    return () => clearTimeout(delayDebounce);
+  }, [searchTerm, searchItems]);
+
+  // ========== ADD ITEM TO CART ==========
+  const addItemToCart = (item, customQuantity = null) => {
+    const quantity = customQuantity !== null ? customQuantity : parseFloat(itemCount);
+    
+    if (quantity <= 0) {
+      alert('Please enter a valid quantity');
+      return;
+    }
+    
+    if (quantity > item.stock_quantity) {
+      alert(`Only ${item.stock_quantity} items available in stock`);
+      return;
+    }
+    
+    setCartItems(prevItems => {
+      const existingItem = prevItems.find(i => i.id === item.id);
+      
+      if (existingItem) {
+        const newQuantity = existingItem.quantity + quantity;
+        if (newQuantity > item.stock_quantity) {
+          alert(`Cannot add ${quantity}. Only ${item.stock_quantity - existingItem.quantity} more available.`);
+          return prevItems;
+        }
+        
+        return prevItems.map(i =>
+          i.id === item.id
+            ? {
+                ...i,
+                quantity: newQuantity,
+                subtotal: newQuantity * i.price,
+                discount_amount: (newQuantity * i.price) * (i.discount_percentage / 100)
+              }
+            : i
+        );
+      }
+      
+      const subtotal = quantity * item.price;
+      const discountAmount = subtotal * (item.discount_percentage || 0) / 100;
+      
+      return [...prevItems, {
+        id: item.id,
+        item_code: item.item_code,
+        item_name: item.item_name,
+        barcode: item.barcode,
+        price: item.price,
+        quantity: quantity,
+        stock_quantity: item.stock_quantity,
+        discount_percentage: item.discount_percentage || 0,
+        discount_amount: discountAmount,
+        subtotal: subtotal - discountAmount,
+        image_path: item.image_path
+      }];
+    });
+    
+    // Clear search and focus back to barcode input
+    setSearchTerm('');
+    setSearchResults([]);
+    if (barcodeInputRef.current) {
+      barcodeInputRef.current.value = '';
+      barcodeInputRef.current.focus();
     }
   };
 
+  // ========== HANDLE BARCODE SCAN ==========
+  const handleBarcodeScan = async (barcode) => {
+    if (!barcode.trim()) return;
+    
+    try {
+      const response = await axios.get(`${API_BASE_URL}/api/billing/search-items`, {
+        ...getAuthHeaders(),
+        params: {
+          search: barcode.trim(),
+          pricing_mode: pricingMode
+        }
+      });
+      
+      if (response.data.items && response.data.items.length > 0) {
+        const item = response.data.items[0];
+        addItemToCart(item);
+      } else {
+        alert('Item not found');
+      }
+    } catch (error) {
+      console.error('Barcode scan error:', error);
+      alert('Error scanning barcode');
+    }
+    
+    // Clear barcode input
+    if (barcodeInputRef.current) {
+      barcodeInputRef.current.value = '';
+      barcodeInputRef.current.focus();
+    }
+  };
+
+  // ========== UPDATE ITEM QUANTITY IN CART ==========
+  const updateItemQuantity = (itemId, newQuantity) => {
+    if (newQuantity <= 0) {
+      removeItemFromCart(itemId);
+      return;
+    }
+    
+    setCartItems(prevItems => {
+      const item = prevItems.find(i => i.id === itemId);
+      if (!item) return prevItems;
+      
+      if (newQuantity > item.stock_quantity) {
+        alert(`Only ${item.stock_quantity} items available`);
+        return prevItems;
+      }
+      
+      return prevItems.map(i =>
+        i.id === itemId
+          ? {
+              ...i,
+              quantity: newQuantity,
+              subtotal: newQuantity * i.price,
+              discount_amount: (newQuantity * i.price) * (i.discount_percentage / 100)
+            }
+          : i
+      );
+    });
+  };
+
+  // ========== REMOVE ITEM FROM CART ==========
+  const removeItemFromCart = (itemId) => {
+    setCartItems(prevItems => prevItems.filter(item => item.id !== itemId));
+  };
+
+  // ========== UPDATE ITEM DISCOUNT ==========
+  const updateItemDiscount = (itemId, discountPercentage) => {
+    setCartItems(prevItems =>
+      prevItems.map(item => {
+        if (item.id === itemId) {
+          const discountAmount = (item.price * item.quantity) * (discountPercentage / 100);
+          return {
+            ...item,
+            discount_percentage: discountPercentage,
+            discount_amount: discountAmount,
+            subtotal: (item.price * item.quantity) - discountAmount
+          };
+        }
+        return item;
+      })
+    );
+  };
+
+  // ========== HANDLE SEARCH INPUT CHANGE ==========
+  const handleSearchChange = (e) => {
+    setSearchTerm(e.target.value);
+  };
+
+  // ========== HANDLE BARCODE INPUT KEYPRESS ==========
+  const handleBarcodeKeyPress = (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      handleBarcodeScan(e.target.value);
+    }
+  };
+
+  // ========== HANDLE ITEM COUNT SHORTCUTS ==========
   const getItemCountNumber = () => {
     const parsed = Number.parseFloat(itemCount);
     return Number.isFinite(parsed) ? parsed : 0;
@@ -82,6 +351,49 @@ function Billing({ onBackToMain }) {
     setItemCount(formatCount(getItemCountNumber()));
   };
 
+  // ========== KEYBOARD SHORTCUTS ==========
+  useEffect(() => {
+    const handleShortcut = (event) => {
+      // Ctrl+Z: Focus barcode input
+      if (event.ctrlKey && event.key === 'z') {
+        event.preventDefault();
+        if (barcodeInputRef.current) {
+          barcodeInputRef.current.focus();
+        }
+      }
+      
+      // Ctrl+F: Focus search input
+      if (event.ctrlKey && event.key === 'f') {
+        event.preventDefault();
+        if (searchInputRef.current) {
+          searchInputRef.current.focus();
+        }
+      }
+      
+      // Ctrl+Plus / Ctrl+Minus for quantity
+      if (event.ctrlKey) {
+        const isIncrease = event.key === '+' || event.key === '=' || event.code === 'NumpadAdd';
+        const isDecrease = event.key === '-' || event.code === 'NumpadSubtract';
+        
+        if (isIncrease) {
+          event.preventDefault();
+          increaseItemCount();
+        }
+        
+        if (isDecrease) {
+          event.preventDefault();
+          decreaseItemCount();
+        }
+      }
+    };
+
+    window.addEventListener('keydown', handleShortcut);
+    return () => {
+      window.removeEventListener('keydown', handleShortcut);
+    };
+  }, []);
+
+  // ========== PAYMENT ROW HANDLERS ==========
   const updatePaymentRow = (rowId, updater) => {
     setPaymentRows((prev) => prev.map((row) => (row.id === rowId ? updater(row) : row)));
   };
@@ -140,36 +452,31 @@ function Billing({ onBackToMain }) {
     .reduce((total, row) => total + (Number.isFinite(Number.parseFloat(row.amount)) ? Number.parseFloat(row.amount) : 0), 0)
     .toFixed(2);
 
-  useEffect(() => {
-    const handleShortcut = (event) => {
-      if (!event.ctrlKey) {
-        return;
+  const handleToggleFullscreen = async () => {
+    const doc = document;
+    const element = doc.documentElement;
+    const isFullscreen = Boolean(doc.fullscreenElement);
+
+    try {
+      if (!isFullscreen) {
+        if (element.requestFullscreen) {
+          await element.requestFullscreen();
+        }
+      } else if (doc.exitFullscreen) {
+        await doc.exitFullscreen();
       }
+    } catch {
+      // Silent fail
+    }
+  };
 
-      const isIncrease = event.key === '+' || event.key === '=' || event.code === 'NumpadAdd';
-      const isDecrease = event.key === '-' || event.code === 'NumpadSubtract';
-
-      if (isIncrease) {
-        event.preventDefault();
-        increaseItemCount();
-      }
-
-      if (isDecrease) {
-        event.preventDefault();
-        decreaseItemCount();
-      }
-    };
-
-    window.addEventListener('keydown', handleShortcut);
-    return () => {
-      window.removeEventListener('keydown', handleShortcut);
-    };
-  }, []);
+  const frontendOnlyNotice = (action) => {
+    alert(`Frontend-only mode: ${action}`);
+  };
 
   return (
     <Layout onBackToMain={onBackToMain} showFullscreen onToggleFullscreen={handleToggleFullscreen}>
       <div className="billing-page h-dvh max-lg:h-fit">
-
         <div className="h-[90%] flex flex-col">
           <div className="px-12 py-5 max-sm:px-6">
             <nav className="flex max-md:flex-col max-md:gap-3" aria-label="Breadcrumb">
@@ -200,12 +507,13 @@ function Billing({ onBackToMain }) {
                 </li>
               </ol>
               <p className="md:ml-auto text-xs text-gray-600 italic">
-                <strong>Shortcuts:</strong> Ctrl+Z: Focus Search | Enter: Payment
+                <strong>Shortcuts:</strong> Ctrl+Z: Focus Barcode | Ctrl+F: Focus Search | Ctrl+Plus/Minus: Change Qty
               </p>
             </nav>
           </div>
 
           <div className="flex h-full gap-2 px-12 pb-5 overflow-y-auto max-sm:px-6 max-xl:flex-col">
+            {/* LEFT PANEL - Cart and Billing */}
             <div className="bg-white flex flex-col w-2/3 rounded-lg border-2 border-[#00000096] max-xl:w-full">
               <div className="flex flex-col">
                 <span className="bg-[#3c8c2c] h-20 max-sm:h-fit rounded-t-md flex max-lg:flex-col max-lg:py-1 justify-between px-4 items-center">
@@ -234,6 +542,7 @@ function Billing({ onBackToMain }) {
                   </span>
                 </span>
 
+                {/* Barcode and Quantity Input Row */}
                 <div className="flex gap-3 p-2 h-fit max-sm:flex-col max-sm:items-center">
                   <div className="custom-select sm:w-1/3">
                     <select className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg block w-full p-2.5" defaultValue="">
@@ -250,10 +559,18 @@ function Billing({ onBackToMain }) {
 
                   <div className="flex items-center gap-2 w-full">
                     <div className="flex-1">
-                      <input type="text" className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg block w-full p-2.5" placeholder="Enter a valid barcode" />
+                      <input
+                        ref={barcodeInputRef}
+                        type="text"
+                        className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg block w-full p-2.5"
+                        placeholder="Scan barcode or enter item code"
+                        onKeyPress={handleBarcodeKeyPress}
+                      />
                     </div>
                     <div className="flex items-center border border-gray-300 rounded-lg bg-gray-50">
-                      <button type="button" onClick={decreaseItemCount} className="px-3 py-2 text-gray-700 hover:bg-gray-200 rounded-l-lg"><i className="fas fa-minus text-sm" /></button>
+                      <button type="button" onClick={decreaseItemCount} className="px-3 py-2 text-gray-700 hover:bg-gray-200 rounded-l-lg">
+                        <i className="fas fa-minus text-sm" />
+                      </button>
                       <input
                         type="text"
                         inputMode="decimal"
@@ -262,12 +579,15 @@ function Billing({ onBackToMain }) {
                         onChange={(e) => handleItemCountChange(e.target.value)}
                         onBlur={handleItemCountBlur}
                       />
-                      <button type="button" onClick={increaseItemCount} className="px-3 py-2 text-gray-700 hover:bg-gray-200 rounded-r-lg"><i className="fas fa-plus text-sm" /></button>
+                      <button type="button" onClick={increaseItemCount} className="px-3 py-2 text-gray-700 hover:bg-gray-200 rounded-r-lg">
+                        <i className="fas fa-plus text-sm" />
+                      </button>
                     </div>
                   </div>
                 </div>
               </div>
 
+              {/* Cart Items Table */}
               <div className="relative h-full max-h-screen overflow-x-auto overflow-y-auto">
                 <table className="w-full text-sm text-left text-gray-500">
                   <thead className="text-xs text-black uppercase bg-[#00000042]">
@@ -282,19 +602,72 @@ function Billing({ onBackToMain }) {
                     </tr>
                   </thead>
                   <tbody>
-                    <tr>
-                      <td colSpan="7" className="px-6 py-8 text-center text-gray-500">No items available.</td>
-                    </tr>
+                    {cartItems.length === 0 ? (
+                      <tr>
+                        <td colSpan="7" className="px-6 py-8 text-center text-gray-500">
+                          No items added. Scan barcode or search items from the right panel.
+                        </td>
+                      </tr>
+                    ) : (
+                      cartItems.map((item) => (
+                        <tr key={item.id} className="border-b hover:bg-gray-50">
+                          <td className="px-6 py-4 font-medium text-gray-900">
+                            {item.item_name}
+                            <span className="block text-xs text-gray-500">{item.item_code}</span>
+                          </td>
+                          <td className="px-6 py-4">
+                            <div className="flex items-center gap-2">
+                              <button
+                                onClick={() => updateItemQuantity(item.id, item.quantity - 1)}
+                                className="px-2 py-1 text-xs bg-gray-200 rounded hover:bg-gray-300"
+                              >
+                                -
+                              </button>
+                              <span className="w-12 text-center">{item.quantity}</span>
+                              <button
+                                onClick={() => updateItemQuantity(item.id, item.quantity + 1)}
+                                className="px-2 py-1 text-xs bg-gray-200 rounded hover:bg-gray-300"
+                              >
+                                +
+                              </button>
+                            </div>
+                          </td>
+                          <td className="px-6 py-4">Rs. {item.price.toFixed(2)}</td>
+                          <td className="px-6 py-4">
+                            <input
+                              type="number"
+                              className="w-16 p-1 text-sm border rounded"
+                              value={item.discount_percentage}
+                              onChange={(e) => updateItemDiscount(item.id, parseFloat(e.target.value) || 0)}
+                              min="0"
+                              max="100"
+                              step="1"
+                            />
+                          </td>
+                          <td className="px-6 py-4">Rs. {item.discount_amount.toFixed(2)}</td>
+                          <td className="px-6 py-4 font-medium">Rs. {item.subtotal.toFixed(2)}</td>
+                          <td className="px-6 py-4">
+                            <button
+                              onClick={() => removeItemFromCart(item.id)}
+                              className="text-red-600 hover:text-red-800"
+                            >
+                              ✕
+                            </button>
+                          </td>
+                        </tr>
+                      ))
+                    )}
                   </tbody>
                 </table>
               </div>
 
+              {/* Footer Summary */}
               <div className="bg-[#0000000F] h-[200px] max-xl:h-fit flex flex-col rounded-b-lg">
                 <span className="flex gap-3 h-fit w-full justify-evenly py-3 border-[#00000096] border-t-2 border-b-2 max-md:text-sm max-sm:text-xs max-md:flex-col max-md:p-2">
-                  <p>Total Items: <span>0</span></p>
-                  <p>Total Quantity: <span>0</span></p>
-                  <p>Total Amount: Rs.<span>0.00</span></p>
-                  <p>Grand Total: Rs. <span>0.00</span></p>
+                  <p>Total Items: <span>{totals.totalItems}</span></p>
+                  <p>Total Quantity: <span>{totals.totalQuantity}</span></p>
+                  <p>Total Amount: Rs.<span>{totals.totalAmount.toFixed(2)}</span></p>
+                  <p>Grand Total: Rs. <span>{totals.grandTotal.toFixed(2)}</span></p>
                 </span>
 
                 <div className="flex items-center max-lg:flex-col">
@@ -302,8 +675,17 @@ function Billing({ onBackToMain }) {
 
                   <div className="flex flex-col w-1/2 gap-2 p-2 max-lg:w-full">
                     <div className="flex items-center justify-between max-sm:flex-col">
-                      <label htmlFor="itemDiscount" className="block text-sm font-medium text-gray-900 lg:w-full text-end lg:pr-2 max-sm:text-xs">Discount</label>
-                      <input type="text" id="itemDiscount" className="block p-2 text-sm text-gray-900 border border-gray-300 rounded-lg bg-gray-100 sm:w-fit" placeholder="0" value="0" readOnly />
+                      <label htmlFor="itemDiscount" className="block text-sm font-medium text-gray-900 lg:w-full text-end lg:pr-2 max-sm:text-xs">
+                        Discount
+                      </label>
+                      <input
+                        type="text"
+                        id="itemDiscount"
+                        className="block p-2 text-sm text-gray-900 border border-gray-300 rounded-lg bg-gray-100 sm:w-fit"
+                        placeholder="0"
+                        value={totals.totalDiscount.toFixed(2)}
+                        readOnly
+                      />
                     </div>
                   </div>
 
@@ -333,27 +715,135 @@ function Billing({ onBackToMain }) {
               </div>
             </div>
 
+            {/* RIGHT PANEL - Search Results */}
             <div className="flex flex-col w-1/3 border-2 rounded-lg max-md:w-full max-xl:w-full overflow-hidden">
               <span className="flex-shrink-0 p-3 bg-[#0000000F] border-b-2 min-h-[65px] relative">
-                <input type="text" className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg block w-full p-2.5" placeholder="Search for items..." />
-                <button type="button" className="absolute right-5 top-5" onClick={() => frontendOnlyNotice('Stop searching')}><i className="fas fa-times" /></button>
-                <button type="button" className="absolute right-10 top-5" onClick={() => frontendOnlyNotice('Search items')}><i className="fas fa-search" /></button>
+                <input
+                  ref={searchInputRef}
+                  type="text"
+                  className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg block w-full p-2.5 pr-20"
+                  placeholder="Search for items by name..."
+                  value={searchTerm}
+                  onChange={handleSearchChange}
+                />
+                {searchTerm && (
+                  <button
+                    type="button"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                    onClick={() => setSearchTerm('')}
+                  >
+                    <i className="fas fa-times" />
+                  </button>
+                )}
+                {isSearching && (
+                  <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                    <div className="w-4 h-4 border-2 border-gray-300 border-t-green-600 rounded-full animate-spin"></div>
+                  </div>
+                )}
               </span>
+              
               <div className="flex-1 grid grid-cols-3 gap-3 overflow-y-auto p-3 auto-rows-max">
-                <div className="col-span-full py-10 text-center text-sm text-gray-500">No items available.</div>
+                {searchResults.length === 0 && !isSearching && searchTerm && (
+                  <div className="col-span-full py-10 text-center text-sm text-gray-500">
+                    No items found matching "{searchTerm}"
+                  </div>
+                )}
+
+                {!searchTerm && isBrowsing && (
+                  <div className="col-span-full py-10 text-center text-sm text-gray-500">
+                    Loading items...
+                  </div>
+                )}
+                {!searchTerm && !isBrowsing && browseItems.length === 0 && (
+                  <div className="col-span-full py-10 text-center text-sm text-gray-500">
+                    No items available
+                  </div>
+                )}
+
+                {(searchTerm ? searchResults : browseItems).map((item) => {
+                  const outOfStock = Number(item.stock_quantity) === 0;
+                  const isLowStock =
+                    Number.isFinite(Number(item.minimum_qty)) &&
+                    Number.isFinite(Number(item.stock_quantity)) &&
+                    Number(item.minimum_qty) > Number(item.stock_quantity);
+
+                  const imageUrl = item.image_url ? `${API_BASE_URL}${item.image_url}` : '';
+
+                  return (
+                    <button
+                      key={item.id}
+                      type="button"
+                      onClick={() => addItemToCart(item)}
+                      disabled={outOfStock}
+                      className="relative group add-to-storage"
+                      style={{
+                        backgroundColor: outOfStock ? '#e0e0e0' : '#ffffff',
+                        cursor: outOfStock ? 'not-allowed' : 'pointer',
+                      }}
+                    >
+                      <div className="bg-[#029ED90F] xl:h-[160px] max-xl:aspect-[4/5] flex flex-col justify-between rounded-md">
+                        <span className={`bg-[#3c8c2c] h-1/6 rounded-t-md text-white flex justify-center items-center text-sm ${isLowStock ? 'bg-red-500' : ''}`}>
+                          <p className="truncate">{item.item_code}</p>
+                        </span>
+                        <div className="flex flex-col justify-between p-1 h-5/6">
+                          <center>
+                            {imageUrl ? (
+                              <img
+                                src={imageUrl}
+                                alt="Product image"
+                                style={{ width: 80, height: 80, borderRadius: 5 }}
+                              />
+                            ) : (
+                              <div style={{ width: 80, height: 80, borderRadius: 5, background: '#f3f4f6' }} />
+                            )}
+                          </center>
+                          <span className="flex flex-col text-xs text-center h-fit">
+                            <p className="truncate">{item.item_name}</p>
+                            <p className="truncate">Quantity : {item.stock_quantity}</p>
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Tooltip (matches HTML behavior) */}
+                      <span className="absolute z-10 hidden px-2 py-1 text-xs text-white bg-black rounded-md -top-8 left-1/2 -translate-x-1/2 whitespace-nowrap group-hover:block">
+                        {item.item_name}
+                      </span>
+                    </button>
+                  );
+                })}
               </div>
+              
               <nav className="flex items-center justify-between px-3 py-2 border-t border-gray-200 bg-white">
-                <p className="text-sm leading-5 text-gray-700">Showing 0 to 0 of 0 results</p>
-                <div className="relative z-0 inline-flex rounded-md shadow-sm">
-                  <button type="button" className="px-3 py-1 text-sm border border-gray-300 bg-white text-gray-700 rounded-l-md">Prev</button>
-                  <button type="button" className="px-3 py-1 text-sm border-t border-b border-gray-300 bg-blue-600 text-white">1</button>
-                  <button type="button" className="px-3 py-1 text-sm border border-gray-300 bg-white text-gray-700 rounded-r-md">Next</button>
-                </div>
+                <p className="text-sm leading-5 text-gray-700">
+                  Showing {(searchTerm ? searchResults : browseItems).length} of {searchTerm ? searchTotal : browseTotal} results
+                </p>
+
+                {!searchTerm && (
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      className="px-3 py-1 text-sm border rounded disabled:opacity-50"
+                      disabled={isBrowsing || browseOffset === 0}
+                      onClick={() => setBrowseOffset((prev) => Math.max(prev - browseLimit, 0))}
+                    >
+                      Prev
+                    </button>
+                    <button
+                      type="button"
+                      className="px-3 py-1 text-sm border rounded disabled:opacity-50"
+                      disabled={isBrowsing || browseOffset + browseLimit >= browseTotal}
+                      onClick={() => setBrowseOffset((prev) => prev + browseLimit)}
+                    >
+                      Next
+                    </button>
+                  </div>
+                )}
               </nav>
             </div>
           </div>
         </div>
 
+        {/* Modals */}
         {showBillNameModal && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-800 bg-opacity-50">
             <div className="p-6 bg-white rounded-lg shadow-lg w-96">
@@ -517,12 +1007,12 @@ function Billing({ onBackToMain }) {
                       name="ci_received_amount"
                       step="0.01"
                       min="0"
-                      defaultValue="0.00"
+                      defaultValue={totals.grandTotal.toFixed(2)}
                       className="billing-payment-input text-gray-900 text-lg font-semibold rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-3"
                       placeholder="Enter amount received from customer (e.g., 5000.00)"
                     />
                     <p className="text-sm text-gray-600 mt-2">
-                      <i className="fas fa-info-circle mr-1" /> Enter the actual cash/amount received from the customer. Change will be calculated automatically.
+                      <i className="fas fa-info-circle mr-1" /> Grand Total: Rs. {totals.grandTotal.toFixed(2)}
                     </p>
                   </div>
 
@@ -540,10 +1030,6 @@ function Billing({ onBackToMain }) {
                       <span className="text-sm text-gray-600">Debit Bill (paid now)</span>
                     </label>
                     <p className="text-xs text-gray-500 mb-3">Unchecked = Credit Bill  ·  Checked = Debit Bill (requires split payment below)</p>
-
-                    <input type="hidden" name="ci_credit_debit" value="credit" />
-                    <input type="hidden" name="ci_payment_records_json" value="" />
-                    <input type="hidden" name="for_oil_billings" value="yes" />
 
                     <div className="mt-3">
                       <div className="flex items-center justify-between mb-2">
@@ -622,28 +1108,18 @@ function Billing({ onBackToMain }) {
                     </div>
                   </div>
 
-                  <input type="hidden" name="t_products" value="0" />
-                  <input type="hidden" name="t_amount" value="0.00" />
-                  <input type="hidden" name="discount" value="0.00" />
-                  <input type="hidden" name="order_discount_percentage" value="0" />
-                  <input type="hidden" name="order_discount_amount" value="0" />
-                  <input type="hidden" name="final_order_discount" value="0" />
-                  <input type="hidden" name="order_discount_display" value="0" />
-                  <input type="hidden" name="additional_fees_amount" value="0" />
-                  <input type="hidden" name="grand_total" value="0.00" />
-
                   <div className="billing-summary-card rounded-lg border border-gray-200 divide-y divide-gray-200 text-sm">
                     <div className="flex justify-between px-4 py-2">
                       <span className="text-gray-500 uppercase text-xs font-medium">Total Products</span>
-                      <span className="font-semibold text-gray-800">0</span>
+                      <span className="font-semibold text-gray-800">{totals.totalItems}</span>
                     </div>
                     <div className="flex justify-between px-4 py-2">
                       <span className="text-gray-500 uppercase text-xs font-medium">Total Amount</span>
-                      <span className="font-semibold text-gray-800">Rs. 0.00</span>
+                      <span className="font-semibold text-gray-800">Rs. {totals.totalAmount.toFixed(2)}</span>
                     </div>
                     <div className="flex justify-between px-4 py-2">
                       <span className="text-gray-500 uppercase text-xs font-medium">Discount</span>
-                      <span className="font-semibold text-gray-800">Rs. 0.00</span>
+                      <span className="font-semibold text-gray-800">Rs. {totals.totalDiscount.toFixed(2)}</span>
                     </div>
                     <div className="flex justify-between items-center px-4 py-2">
                       <span className="text-gray-500 uppercase text-xs font-medium">Additional Discount</span>
@@ -654,7 +1130,7 @@ function Billing({ onBackToMain }) {
                     </div>
                     <div className="flex justify-between px-4 py-2 bg-white">
                       <span className="text-gray-700 uppercase text-xs font-bold">Grand Total</span>
-                      <span className="font-bold text-gray-900 text-base">Rs. 0.00</span>
+                      <span className="font-bold text-gray-900 text-base">Rs. {totals.grandTotal.toFixed(2)}</span>
                     </div>
                   </div>
                 </div>

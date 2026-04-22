@@ -3,8 +3,75 @@ import './Billing.css';
 import Layout from '../../components/Layout';
 import axios from 'axios';
 
-// Backend is running on port 3000
+// Backend API URL
 const API_BASE_URL = 'http://localhost:3000';
+
+// Bill Modal Component
+const BillModal = ({ billHtml, salesCode, onClose }) => {
+  const printTimeoutRef = useRef(null);
+  const closeTimeoutRef = useRef(null);
+
+  useEffect(() => {
+    // Auto-print after modal opens
+    printTimeoutRef.current = setTimeout(() => {
+      const printWindow = window.open('', '_blank');
+      if (printWindow) {
+        printWindow.document.write(billHtml);
+        printWindow.document.close();
+        printWindow.print();
+        printWindow.onafterprint = () => {
+          printWindow.close();
+        };
+      }
+    }, 500);
+
+    // Auto-close modal after 4 seconds
+    closeTimeoutRef.current = setTimeout(() => {
+      onClose();
+    }, 4000);
+
+    return () => {
+      if (printTimeoutRef.current) clearTimeout(printTimeoutRef.current);
+      if (closeTimeoutRef.current) clearTimeout(closeTimeoutRef.current);
+    };
+  }, [billHtml, onClose, salesCode]);
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 animate-fadeIn">
+      <div className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4 overflow-hidden animate-slideUp">
+        {/* Success Header */}
+        <div className="bg-green-500 p-4 text-white text-center">
+          <svg className="w-12 h-12 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+          </svg>
+          <h2 className="text-xl font-bold">Payment Successful!</h2>
+          <p className="text-sm">Invoice: {salesCode}</p>
+        </div>
+
+        {/* Body */}
+        <div className="p-4 text-center">
+          <div className="mb-4">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-500 mx-auto mb-3"></div>
+            <p className="text-gray-600">Printing bill... Please wait.</p>
+            <p className="text-xs text-gray-400 mt-2">Window will close automatically</p>
+          </div>
+        </div>
+
+        {/* Progress Bar */}
+        <div className="w-full bg-gray-200 h-1">
+          <div className="bg-green-500 h-1 animate-progress"></div>
+        </div>
+
+        {/* Footer */}
+        <div className="p-3 bg-gray-50 text-center">
+          <button onClick={onClose} className="text-sm text-gray-500 hover:text-gray-700">
+            Close
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
 
 function Billing({ onBackToMain }) {
   // Get token from localStorage
@@ -35,6 +102,28 @@ function Billing({ onBackToMain }) {
   const [showBillNameModal, setShowBillNameModal] = useState(false);
   const [billName, setBillName] = useState('');
   const [billNameError, setBillNameError] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [billData, setBillData] = useState(null);
+
+  // Customer states
+  const [customers, setCustomers] = useState([]);
+  const [selectedCustomer, setSelectedCustomer] = useState(null);
+  const [customerSearchTerm, setCustomerSearchTerm] = useState('');
+  const [isCustomerDropdownOpen, setIsCustomerDropdownOpen] = useState(false);
+  const [isLoadingCustomers, setIsLoadingCustomers] = useState(false);
+  const customerDropdownRef = useRef(null);
+  
+  const [newCustomerData, setNewCustomerData] = useState({
+    customer_name: '',
+    contact_number: '',
+    email: '',
+    city: '',
+    address: ''
+  });
+
+  // Hold orders states
+  const [holdOrders, setHoldOrders] = useState([]);
+  const [isLoadingHoldOrders, setIsLoadingHoldOrders] = useState(false);
 
   // ========== STATE FOR ITEMS ==========
   const [cartItems, setCartItems] = useState([]);
@@ -50,6 +139,17 @@ function Billing({ onBackToMain }) {
   const searchInputRef = useRef(null);
   const barcodeInputRef = useRef(null);
 
+  // Close customer dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (customerDropdownRef.current && !customerDropdownRef.current.contains(event.target)) {
+        setIsCustomerDropdownOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
   // ========== CART CALCULATIONS ==========
   const calculateTotals = useCallback(() => {
     const totalItems = cartItems.length;
@@ -63,7 +163,67 @@ function Billing({ onBackToMain }) {
 
   const totals = calculateTotals();
 
-  // ========== LOAD ITEMS FOR RIGHT PANEL (NO SEARCH) ==========
+  // ========== LOAD HOLD ORDERS ==========
+  const loadHoldOrders = useCallback(async () => {
+    setIsLoadingHoldOrders(true);
+    try {
+      const response = await axios.get(`${API_BASE_URL}/api/billing/hold-orders`, getAuthHeaders());
+      setHoldOrders(response.data.holdOrders || []);
+    } catch (error) {
+      console.error('Load hold orders error:', error);
+    } finally {
+      setIsLoadingHoldOrders(false);
+    }
+  }, []);
+
+  // ========== LOAD CUSTOMERS ==========
+  const loadCustomers = useCallback(async (search = '') => {
+    setIsLoadingCustomers(true);
+    try {
+      const response = await axios.get(`${API_BASE_URL}/api/billing/customers/search`, {
+        ...getAuthHeaders(),
+        params: { search: search.trim() || '' }
+      });
+      setCustomers(response.data.customers || []);
+    } catch (error) {
+      console.error('Load customers error:', error);
+      setCustomers([]);
+    } finally {
+      setIsLoadingCustomers(false);
+    }
+  }, []);
+
+  // Load initial customers when dropdown opens
+  useEffect(() => {
+    if (isCustomerDropdownOpen) {
+      loadCustomers(customerSearchTerm);
+    }
+  }, [isCustomerDropdownOpen, customerSearchTerm, loadCustomers]);
+
+  // Debounced customer search
+  useEffect(() => {
+    if (isCustomerDropdownOpen) {
+      const delayDebounce = setTimeout(() => {
+        loadCustomers(customerSearchTerm);
+      }, 300);
+      return () => clearTimeout(delayDebounce);
+    }
+  }, [customerSearchTerm, isCustomerDropdownOpen, loadCustomers]);
+
+  // ========== SELECT CUSTOMER ==========
+  const handleSelectCustomer = (customer) => {
+    setSelectedCustomer(customer);
+    setCustomerSearchTerm(customer.customer_name);
+    setIsCustomerDropdownOpen(false);
+  };
+
+  const handleClearCustomer = () => {
+    setSelectedCustomer(null);
+    setCustomerSearchTerm('');
+    setIsCustomerDropdownOpen(false);
+  };
+
+  // ========== LOAD ITEMS FOR RIGHT PANEL ==========
   const loadBrowseItems = useCallback(async ({ offset }) => {
     setIsBrowsing(true);
     try {
@@ -94,7 +254,6 @@ function Billing({ onBackToMain }) {
   }, [pricingMode, browseLimit]);
 
   useEffect(() => {
-    // When pricing mode changes, reset to first page (browseOffset effect will fetch)
     setBrowseOffset(0);
   }, [pricingMode]);
 
@@ -102,7 +261,7 @@ function Billing({ onBackToMain }) {
     loadBrowseItems({ offset: browseOffset });
   }, [browseOffset, loadBrowseItems]);
 
-  // ========== SEARCH ITEMS FROM BACKEND ==========
+  // ========== SEARCH ITEMS ==========
   const searchItems = useCallback(async (search) => {
     if (!search.trim()) {
       setSearchResults([]);
@@ -122,7 +281,7 @@ function Billing({ onBackToMain }) {
 
       if (response.data.items) {
         setSearchResults(response.data.items);
-        setSearchTotal(Number.isFinite(Number(response.data.total)) ? Number(response.data.total) : response.data.items.length);
+        setSearchTotal(response.data.items.length);
       } else {
         setSearchResults([]);
         setSearchTotal(0);
@@ -149,7 +308,6 @@ function Billing({ onBackToMain }) {
         setSearchResults([]);
       }
     }, 300);
-
     return () => clearTimeout(delayDebounce);
   }, [searchTerm, searchItems]);
 
@@ -207,7 +365,6 @@ function Billing({ onBackToMain }) {
       }];
     });
     
-    // Clear search and focus back to barcode input
     setSearchTerm('');
     setSearchResults([]);
     if (barcodeInputRef.current) {
@@ -240,14 +397,13 @@ function Billing({ onBackToMain }) {
       alert('Error scanning barcode');
     }
     
-    // Clear barcode input
     if (barcodeInputRef.current) {
       barcodeInputRef.current.value = '';
       barcodeInputRef.current.focus();
     }
   };
 
-  // ========== UPDATE ITEM QUANTITY IN CART ==========
+  // ========== CART OPERATIONS ==========
   const updateItemQuantity = (itemId, newQuantity) => {
     if (newQuantity <= 0) {
       removeItemFromCart(itemId);
@@ -276,12 +432,10 @@ function Billing({ onBackToMain }) {
     });
   };
 
-  // ========== REMOVE ITEM FROM CART ==========
   const removeItemFromCart = (itemId) => {
     setCartItems(prevItems => prevItems.filter(item => item.id !== itemId));
   };
 
-  // ========== UPDATE ITEM DISCOUNT ==========
   const updateItemDiscount = (itemId, discountPercentage) => {
     setCartItems(prevItems =>
       prevItems.map(item => {
@@ -299,12 +453,205 @@ function Billing({ onBackToMain }) {
     );
   };
 
-  // ========== HANDLE SEARCH INPUT CHANGE ==========
+  // ========== HOLD ORDER FUNCTIONS ==========
+  const saveHoldOrder = async () => {
+    if (!billName.trim()) {
+      setBillNameError(true);
+      return;
+    }
+
+    if (cartItems.length === 0) {
+      alert('Cannot hold empty cart');
+      return;
+    }
+
+    setIsProcessing(true);
+    try {
+      const response = await axios.post(`${API_BASE_URL}/api/billing/hold`, {
+        bill_name: billName,
+        cart_items: cartItems,
+        totals: {
+          totalQuantity: totals.totalQuantity,
+          totalAmount: totals.totalAmount,
+          grandTotal: totals.grandTotal
+        },
+        pricing_mode: pricingMode,
+        discount: {
+          amount: totals.totalDiscount,
+          percentage: 0
+        }
+      }, getAuthHeaders());
+
+      if (response.data.success) {
+        alert('Order held successfully');
+        setCartItems([]);
+        setBillName('');
+        setShowBillNameModal(false);
+        loadHoldOrders();
+      }
+    } catch (error) {
+      console.error('Save hold order error:', error);
+      alert(error.response?.data?.error || 'Failed to save hold order');
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const loadHoldOrder = async (holdId) => {
+    setIsProcessing(true);
+    try {
+      const response = await axios.get(`${API_BASE_URL}/api/billing/hold/${holdId}`, getAuthHeaders());
+      const { cart_items, pricing_mode } = response.data;
+      
+      setCartItems(cart_items);
+      setPricingMode(pricing_mode);
+      setShowHoldModal(false);
+      alert('Hold order loaded successfully');
+    } catch (error) {
+      console.error('Load hold order error:', error);
+      alert(error.response?.data?.error || 'Failed to load hold order');
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const deleteHoldOrder = async (holdId) => {
+    if (!confirm('Are you sure you want to delete this hold order?')) return;
+    
+    try {
+      await axios.delete(`${API_BASE_URL}/api/billing/hold/${holdId}`, getAuthHeaders());
+      alert('Hold order deleted');
+      loadHoldOrders();
+    } catch (error) {
+      console.error('Delete hold order error:', error);
+      alert(error.response?.data?.error || 'Failed to delete hold order');
+    }
+  };
+
+  // ========== CREATE NEW CUSTOMER ==========
+  const createNewCustomer = async (e) => {
+    e.preventDefault();
+    
+    if (!newCustomerData.customer_name.trim()) {
+      alert('Customer name is required');
+      return;
+    }
+    if (!newCustomerData.contact_number.trim()) {
+      alert('Contact number is required');
+      return;
+    }
+
+    try {
+      const response = await axios.post(`${API_BASE_URL}/api/billing/customers`, newCustomerData, getAuthHeaders());
+      
+      if (response.data.success) {
+        alert('Customer created successfully');
+        handleSelectCustomer(response.data.customer);
+        setNewCustomerData({
+          customer_name: '',
+          contact_number: '',
+          email: '',
+          city: '',
+          address: ''
+        });
+        setShowCustomerModal(false);
+      }
+    } catch (error) {
+      console.error('Create customer error:', error);
+      alert(error.response?.data?.error || 'Failed to create customer');
+    }
+  };
+
+  // ========== PROCESS PAYMENT ==========
+  const processPayment = async (e) => {
+    e.preventDefault();
+    
+    const receivedAmount = parseFloat(document.getElementById('ci_received_amount')?.value || 0);
+    const creditCheckbox = document.querySelector('.peer');
+    const isCreditBill = creditCheckbox ? !creditCheckbox.checked : false;
+    
+    // Get split payments from payment rows
+    const splitPayments = paymentRows
+      .filter(row => parseFloat(row.amount) > 0)
+      .map(row => ({
+        source_type: row.source,
+        amount: parseFloat(row.amount)
+      }));
+
+    if (!isCreditBill && splitPayments.length === 0 && receivedAmount === 0) {
+      alert('Please enter payment amount');
+      return;
+    }
+
+    if (cartItems.length === 0) {
+      alert('No items in cart');
+      return;
+    }
+
+    setIsProcessing(true);
+    
+    try {
+      const paymentData = {
+        customer_id: selectedCustomer?.id || null,
+        customer_data: null,
+        cart_items: cartItems.map(item => ({
+          id: item.id,
+          item_code: item.item_code,
+          item_name: item.item_name,
+          quantity: item.quantity,
+          price: item.price,
+          discount_percentage: item.discount_percentage,
+          discount_amount: item.discount_amount,
+          subtotal: item.subtotal,
+          stock_quantity: item.stock_quantity
+        })),
+        totals: {
+          totalAmount: totals.totalAmount,
+          totalQuantity: totals.totalQuantity,
+          totalDiscount: totals.totalDiscount
+        },
+        discount: {
+          amount: totals.totalDiscount,
+          percentage: 0
+        },
+        payment: {
+          received_amount: receivedAmount,
+          payment_type: splitPayments.length > 1 ? 'SPLIT' : (splitPayments[0]?.source_type || 'CASH')
+        },
+        split_payments: splitPayments,
+        pricing_mode: pricingMode,
+        sales_note: '',
+        is_credit_bill: isCreditBill
+      };
+
+      const response = await axios.post(`${API_BASE_URL}/api/billing/process-payment`, paymentData, getAuthHeaders());
+      
+      if (response.data.success && response.data.bill_html) {
+        // Show bill modal
+        setBillData({
+          html: response.data.bill_html,
+          salesCode: response.data.sales_code
+        });
+        
+        // Clear cart and close modal
+        setCartItems([]);
+        handleClearCustomer();
+        setShowPaymentModal(false);
+        setPaymentRows([createPaymentSourceRow()]);
+      }
+    } catch (error) {
+      console.error('Payment error:', error);
+      alert(error.response?.data?.error || 'Payment processing failed');
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  // ========== INPUT HANDLERS ==========
   const handleSearchChange = (e) => {
     setSearchTerm(e.target.value);
   };
 
-  // ========== HANDLE BARCODE INPUT KEYPRESS ==========
   const handleBarcodeKeyPress = (e) => {
     if (e.key === 'Enter') {
       e.preventDefault();
@@ -312,7 +659,6 @@ function Billing({ onBackToMain }) {
     }
   };
 
-  // ========== HANDLE ITEM COUNT SHORTCUTS ==========
   const getItemCountNumber = () => {
     const parsed = Number.parseFloat(itemCount);
     return Number.isFinite(parsed) ? parsed : 0;
@@ -350,48 +696,6 @@ function Billing({ onBackToMain }) {
     }
     setItemCount(formatCount(getItemCountNumber()));
   };
-
-  // ========== KEYBOARD SHORTCUTS ==========
-  useEffect(() => {
-    const handleShortcut = (event) => {
-      // Ctrl+Z: Focus barcode input
-      if (event.ctrlKey && event.key === 'z') {
-        event.preventDefault();
-        if (barcodeInputRef.current) {
-          barcodeInputRef.current.focus();
-        }
-      }
-      
-      // Ctrl+F: Focus search input
-      if (event.ctrlKey && event.key === 'f') {
-        event.preventDefault();
-        if (searchInputRef.current) {
-          searchInputRef.current.focus();
-        }
-      }
-      
-      // Ctrl+Plus / Ctrl+Minus for quantity
-      if (event.ctrlKey) {
-        const isIncrease = event.key === '+' || event.key === '=' || event.code === 'NumpadAdd';
-        const isDecrease = event.key === '-' || event.code === 'NumpadSubtract';
-        
-        if (isIncrease) {
-          event.preventDefault();
-          increaseItemCount();
-        }
-        
-        if (isDecrease) {
-          event.preventDefault();
-          decreaseItemCount();
-        }
-      }
-    };
-
-    window.addEventListener('keydown', handleShortcut);
-    return () => {
-      window.removeEventListener('keydown', handleShortcut);
-    };
-  }, []);
 
   // ========== PAYMENT ROW HANDLERS ==========
   const updatePaymentRow = (rowId, updater) => {
@@ -452,6 +756,52 @@ function Billing({ onBackToMain }) {
     .reduce((total, row) => total + (Number.isFinite(Number.parseFloat(row.amount)) ? Number.parseFloat(row.amount) : 0), 0)
     .toFixed(2);
 
+  // ========== KEYBOARD SHORTCUTS ==========
+  useEffect(() => {
+    const handleShortcut = (event) => {
+      if (event.ctrlKey && event.key === 'z') {
+        event.preventDefault();
+        if (barcodeInputRef.current) {
+          barcodeInputRef.current.focus();
+        }
+      }
+      
+      if (event.ctrlKey && event.key === 'f') {
+        event.preventDefault();
+        if (searchInputRef.current) {
+          searchInputRef.current.focus();
+        }
+      }
+      
+      if (event.ctrlKey) {
+        const isIncrease = event.key === '+' || event.key === '=' || event.code === 'NumpadAdd';
+        const isDecrease = event.key === '-' || event.code === 'NumpadSubtract';
+        
+        if (isIncrease) {
+          event.preventDefault();
+          increaseItemCount();
+        }
+        
+        if (isDecrease) {
+          event.preventDefault();
+          decreaseItemCount();
+        }
+      }
+    };
+
+    window.addEventListener('keydown', handleShortcut);
+    return () => {
+      window.removeEventListener('keydown', handleShortcut);
+    };
+  }, []);
+
+  // Load hold orders when modal opens
+  useEffect(() => {
+    if (showHoldModal) {
+      loadHoldOrders();
+    }
+  }, [showHoldModal, loadHoldOrders]);
+
   const handleToggleFullscreen = async () => {
     const doc = document;
     const element = doc.documentElement;
@@ -468,10 +818,6 @@ function Billing({ onBackToMain }) {
     } catch {
       // Silent fail
     }
-  };
-
-  const frontendOnlyNotice = (action) => {
-    alert(`Frontend-only mode: ${action}`);
   };
 
   return (
@@ -523,7 +869,7 @@ function Billing({ onBackToMain }) {
                   <span className="flex justify-end gap-3 max-sm:p-2 max-sm:text-sm max-sm:flex-col max-sm:w-full">
                     <button type="button" onClick={() => setShowHoldModal(true)} className="relative px-6 py-1 text-black bg-white border-2 rounded-lg">
                       View Hold List
-                      <span className="absolute right-0 flex items-center justify-center w-6 h-6 text-sm text-white bg-red-500 border-2 rounded-full top-1">0</span>
+                      <span className="absolute right-0 flex items-center justify-center w-6 h-6 text-sm text-white bg-red-500 border-2 rounded-full top-1">{holdOrders.length}</span>
                     </button>
                     <button
                       type="button"
@@ -542,19 +888,108 @@ function Billing({ onBackToMain }) {
                   </span>
                 </span>
 
-                {/* Barcode and Quantity Input Row */}
+                {/* Customer Selection Row with Searchable Dropdown */}
                 <div className="flex gap-3 p-2 h-fit max-sm:flex-col max-sm:items-center">
-                  <div className="custom-select sm:w-1/3">
-                    <select className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg block w-full p-2.5" defaultValue="">
-                      <option value="">No customers available</option>
-                    </select>
+                  <div className="custom-select sm:w-1/3 relative" ref={customerDropdownRef}>
+                    <div className="relative">
+                      <input
+                        type="text"
+                        className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg block w-full p-2.5 pr-10"
+                        placeholder="Search customer..."
+                        value={customerSearchTerm}
+                        onChange={(e) => {
+                          setCustomerSearchTerm(e.target.value);
+                          setIsCustomerDropdownOpen(true);
+                        }}
+                        onFocus={() => setIsCustomerDropdownOpen(true)}
+                      />
+                      {selectedCustomer && (
+                        <button
+                          type="button"
+                          className="absolute right-2 top-1/2 -translate-y-1/2 text-red-500 hover:text-red-700"
+                          onClick={handleClearCustomer}
+                        >
+                          ✕
+                        </button>
+                      )}
+                      {!selectedCustomer && (
+                        <svg className="absolute right-2 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                        </svg>
+                      )}
+                    </div>
+                    
+                    {/* Customer Dropdown */}
+                    {isCustomerDropdownOpen && (
+                      <div className="absolute z-50 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-64 overflow-y-auto">
+                        {isLoadingCustomers ? (
+                          <div className="p-3 text-center text-gray-500">
+                            <div className="inline-block w-4 h-4 border-2 border-gray-300 border-t-green-600 rounded-full animate-spin mr-2"></div>
+                            Loading...
+                          </div>
+                        ) : customers.length > 0 ? (
+                          <>
+                            {customers.map((customer) => (
+                              <div
+                                key={customer.id}
+                                className="p-3 cursor-pointer hover:bg-gray-100 border-b border-gray-100 last:border-0"
+                                onClick={() => handleSelectCustomer(customer)}
+                              >
+                                <div className="font-medium text-gray-900">{customer.customer_name}</div>
+                                <div className="text-xs text-gray-500 mt-1">
+                                  <span className="mr-3">📞 {customer.contact_number}</span>
+                                  {customer.due_amount > 0 && (
+                                    <span className="text-red-500">Due: Rs. {customer.due_amount.toFixed(2)}</span>
+                                  )}
+                                </div>
+                              </div>
+                            ))}
+                          </>
+                        ) : (
+                          <div className="p-3 text-center text-gray-500">
+                            {customerSearchTerm ? (
+                              <>
+                                No customers found matching "{customerSearchTerm}"
+                                <button
+                                  type="button"
+                                  className="block w-full mt-2 text-green-600 hover:text-green-700"
+                                  onClick={() => {
+                                    setIsCustomerDropdownOpen(false);
+                                    setShowCustomerModal(true);
+                                  }}
+                                >
+                                  + Add New Customer
+                                </button>
+                              </>
+                            ) : (
+                              'Type to search customers'
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    )}
+                    
+                    {/* Selected Customer Display */}
+                    {selectedCustomer && (
+                      <div className="mt-1 text-xs text-green-600 flex items-center gap-2">
+                        <span>✓ Selected: {selectedCustomer.customer_name}</span>
+                        {selectedCustomer.due_amount > 0 && (
+                          <span className="text-red-500">(Due: Rs. {selectedCustomer.due_amount.toFixed(2)})</span>
+                        )}
+                      </div>
+                    )}
                   </div>
 
-                  <button type="button" onClick={() => setShowCustomerModal(true)} className="text-white w-fit bg-[#3c8c2c] rounded-lg text-sm px-5 py-2.5 inline-flex items-center">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" className="bi bi-person-circle" viewBox="0 0 16 16">
-                      <path d="M11 6a3 3 0 1 1-6 0 3 3 0 0 1 6 0" />
-                      <path fillRule="evenodd" d="M0 8a8 8 0 1 1 16 0A8 8 0 0 1 0 8m8-7a7 7 0 0 0-5.468 11.37C3.242 11.226 4.805 10 8 10s4.757 1.225 5.468 2.37A7 7 0 0 0 8 1" />
+                  <button 
+                    type="button" 
+                    onClick={() => setShowCustomerModal(true)} 
+                    className="text-white w-fit bg-[#3c8c2c] rounded-lg text-sm px-5 py-2.5 inline-flex items-center gap-1 hover:bg-[#2d6b22] transition-colors"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" className="bi bi-person-plus" viewBox="0 0 16 16">
+                      <path d="M6 8a3 3 0 1 0 0-6 3 3 0 0 0 0 6zm2-3a2 2 0 1 1-4 0 2 2 0 0 1 4 0zm4 8c0 1-1 1-1 1H1s-1 0-1-1 1-4 6-4 6 3 6 4zm-1-.004c-.001-.246-.154-.986-.832-1.664C9.516 10.68 8.289 10 6 10c-2.29 0-3.516.68-4.168 1.332-.678.678-.83 1.418-.832 1.664h10z"/>
+                      <path fillRule="evenodd" d="M13.5 5a.5.5 0 0 1 .5.5V7h1.5a.5.5 0 0 1 0 1H14v1.5a.5.5 0 0 1-1 0V8h-1.5a.5.5 0 0 1 0-1H13V5.5a.5.5 0 0 1 .5-.5z"/>
                     </svg>
+                    New Customer
                   </button>
 
                   <div className="flex items-center gap-2 w-full">
@@ -703,12 +1138,16 @@ function Billing({ onBackToMain }) {
                       </svg>
                       Hold All
                     </button>
-                    <button type="button" onClick={() => frontendOnlyNotice('Cancel billing')} className="col-span-2 px-5 py-2 text-sm text-white bg-red-600 rounded-lg flex items-center justify-center gap-2">
+                    <button type="button" onClick={() => {
+                      if (confirm('Clear entire cart?')) {
+                        setCartItems([]);
+                      }
+                    }} className="col-span-2 px-5 py-2 text-sm text-white bg-red-600 rounded-lg flex items-center justify-center gap-2">
                       <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" className="bi bi-slash-circle" viewBox="0 0 16 16">
                         <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14m0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16" />
                         <path d="M11.354 4.646a.5.5 0 0 0-.708 0l-6 6a.5.5 0 0 0 .708.708l6-6a.5.5 0 0 0 0-.708" />
                       </svg>
-                      Cancel
+                      Clear Cart
                     </button>
                   </div>
                 </div>
@@ -762,11 +1201,7 @@ function Billing({ onBackToMain }) {
 
                 {(searchTerm ? searchResults : browseItems).map((item) => {
                   const outOfStock = Number(item.stock_quantity) === 0;
-                  const isLowStock =
-                    Number.isFinite(Number(item.minimum_qty)) &&
-                    Number.isFinite(Number(item.stock_quantity)) &&
-                    Number(item.minimum_qty) > Number(item.stock_quantity);
-
+                  const isLowStock = Number.isFinite(Number(item.minimum_qty)) && Number.isFinite(Number(item.stock_quantity)) && Number(item.minimum_qty) > Number(item.stock_quantity);
                   const imageUrl = item.image_url ? `${API_BASE_URL}${item.image_url}` : '';
 
                   return (
@@ -788,23 +1223,17 @@ function Billing({ onBackToMain }) {
                         <div className="flex flex-col justify-between p-1 h-5/6">
                           <center>
                             {imageUrl ? (
-                              <img
-                                src={imageUrl}
-                                alt="Product image"
-                                style={{ width: 80, height: 80, borderRadius: 5 }}
-                              />
+                              <img src={imageUrl} alt="Product image" style={{ width: 80, height: 80, borderRadius: 5 }} />
                             ) : (
                               <div style={{ width: 80, height: 80, borderRadius: 5, background: '#f3f4f6' }} />
                             )}
                           </center>
                           <span className="flex flex-col text-xs text-center h-fit">
                             <p className="truncate">{item.item_name}</p>
-                            <p className="truncate">Quantity : {item.stock_quantity}</p>
+                            <p className="truncate">Stock: {item.stock_quantity}</p>
                           </span>
                         </div>
                       </div>
-
-                      {/* Tooltip (matches HTML behavior) */}
                       <span className="absolute z-10 hidden px-2 py-1 text-xs text-white bg-black rounded-md -top-8 left-1/2 -translate-x-1/2 whitespace-nowrap group-hover:block">
                         {item.item_name}
                       </span>
@@ -817,7 +1246,6 @@ function Billing({ onBackToMain }) {
                 <p className="text-sm leading-5 text-gray-700">
                   Showing {(searchTerm ? searchResults : browseItems).length} of {searchTerm ? searchTotal : browseTotal} results
                 </p>
-
                 {!searchTerm && (
                   <div className="flex items-center gap-2">
                     <button
@@ -866,24 +1294,17 @@ function Billing({ onBackToMain }) {
                 <button
                   type="button"
                   className="px-4 py-2 text-white bg-blue-500 rounded"
-                  onClick={() => {
-                    if (!billName.trim()) {
-                      setBillNameError(true);
-                      return;
-                    }
-                    frontendOnlyNotice('Hold order saved locally');
-                    setShowBillNameModal(false);
-                    setBillName('');
-                    setBillNameError(false);
-                  }}
+                  onClick={saveHoldOrder}
+                  disabled={isProcessing}
                 >
-                  Save
+                  {isProcessing ? 'Saving...' : 'Save'}
                 </button>
               </div>
             </div>
           </div>
         )}
 
+        {/* Hold List Modal */}
         {showHoldModal && (
           <div className="fixed inset-0 z-50 flex justify-center items-center overflow-y-auto overflow-x-hidden bg-black/50">
             <div className="relative w-full max-w-2xl max-h-full p-4">
@@ -898,21 +1319,47 @@ function Billing({ onBackToMain }) {
                 </div>
                 <div className="p-4 space-y-4 md:p-5">
                   <div className="relative overflow-x-auto">
-                    <table className="w-full text-sm text-left text-gray-500">
-                      <thead className="text-xs text-gray-700 uppercase bg-gray-50">
-                        <tr>
-                          <th className="px-6 py-3">ID</th>
-                          <th className="px-6 py-3">Date</th>
-                          <th className="px-6 py-3">Ref Name</th>
-                          <th className="px-6 py-3">Action</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        <tr>
-                          <td colSpan="4" className="px-6 py-4 text-center text-gray-500">No hold orders found.</td>
-                        </tr>
-                      </tbody>
-                    </table>
+                    {isLoadingHoldOrders ? (
+                      <div className="text-center py-4">Loading...</div>
+                    ) : holdOrders.length === 0 ? (
+                      <div className="text-center py-4 text-gray-500">No hold orders found.</div>
+                    ) : (
+                      <table className="w-full text-sm text-left text-gray-500">
+                        <thead className="text-xs text-gray-700 uppercase bg-gray-50">
+                          <tr>
+                            <th className="px-6 py-3">Name</th>
+                            <th className="px-6 py-3">Date</th>
+                            <th className="px-6 py-3">Items</th>
+                            <th className="px-6 py-3">Total</th>
+                            <th className="px-6 py-3">Action</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {holdOrders.map((order) => (
+                            <tr key={order.id} className="border-b">
+                              <td className="px-6 py-4">{order.bill_name || order.session_code}</td>
+                              <td className="px-6 py-4">{new Date(order.created_at).toLocaleDateString()}</td>
+                              <td className="px-6 py-4">{order.total_items}</td>
+                              <td className="px-6 py-4">Rs. {order.grand_total?.toFixed(2)}</td>
+                              <td className="px-6 py-4">
+                                <button
+                                  onClick={() => loadHoldOrder(order.id)}
+                                  className="px-3 py-1 mr-2 text-white bg-green-500 rounded hover:bg-green-600"
+                                >
+                                  Load
+                                </button>
+                                <button
+                                  onClick={() => deleteHoldOrder(order.id)}
+                                  className="px-3 py-1 text-white bg-red-500 rounded hover:bg-red-600"
+                                >
+                                  Delete
+                                </button>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    )}
                   </div>
                 </div>
               </div>
@@ -920,19 +1367,13 @@ function Billing({ onBackToMain }) {
           </div>
         )}
 
+        {/* Customer Modal */}
         {showCustomerModal && (
           <div className="fixed inset-0 z-50 flex justify-center items-center overflow-y-auto overflow-x-hidden bg-black/50">
-            <form
-              className="relative w-full max-w-2xl max-h-full p-4"
-              onSubmit={(e) => {
-                e.preventDefault();
-                frontendOnlyNotice('Add customer save');
-                setShowCustomerModal(false);
-              }}
-            >
+            <form className="relative w-full max-w-2xl max-h-full p-4" onSubmit={createNewCustomer}>
               <div className="relative bg-white rounded-lg shadow">
                 <div className="flex items-center justify-between p-4 border-b rounded-t md:p-5">
-                  <h3 className="text-xl font-semibold text-gray-900">Add Customer</h3>
+                  <h3 className="text-xl font-semibold text-gray-900">Add New Customer</h3>
                   <button type="button" className="inline-flex items-center justify-center w-8 h-8 text-sm text-gray-400 bg-transparent rounded-lg hover:bg-gray-200 hover:text-gray-900" onClick={() => setShowCustomerModal(false)}>
                     <svg className="w-3 h-3" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 14 14">
                       <path stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="m1 1 6 6m0 0 6 6M7 7l6-6M7 7l-6 6" />
@@ -940,35 +1381,63 @@ function Billing({ onBackToMain }) {
                   </button>
                 </div>
                 <div className="p-4 space-y-4 md:p-5">
-                  <div className="grid grid-cols-3 gap-6 max-md:grid-cols-1">
+                  <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <label className="block mb-2 text-sm font-medium text-black">Customer Name</label>
-                      <input type="text" className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg block w-full p-2.5" placeholder="Enter Customer name" />
+                      <label className="block mb-2 text-sm font-medium text-black">Customer Name *</label>
+                      <input
+                        type="text"
+                        className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg block w-full p-2.5"
+                        placeholder="Enter Customer name"
+                        value={newCustomerData.customer_name}
+                        onChange={(e) => setNewCustomerData({...newCustomerData, customer_name: e.target.value})}
+                        required
+                      />
                     </div>
                     <div>
-                      <label className="block mb-2 text-sm font-medium text-black">Mobile Number</label>
-                      <input type="text" className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg block w-full p-2.5" placeholder="Enter Mobile Number" />
+                      <label className="block mb-2 text-sm font-medium text-black">Mobile Number *</label>
+                      <input
+                        type="text"
+                        className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg block w-full p-2.5"
+                        placeholder="Enter Mobile Number"
+                        value={newCustomerData.contact_number}
+                        onChange={(e) => setNewCustomerData({...newCustomerData, contact_number: e.target.value})}
+                        required
+                      />
                     </div>
                     <div>
                       <label className="block mb-2 text-sm font-medium text-black">Email</label>
-                      <input type="email" className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg block w-full p-2.5" placeholder="Enter email" />
+                      <input
+                        type="email"
+                        className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg block w-full p-2.5"
+                        placeholder="Enter email"
+                        value={newCustomerData.email}
+                        onChange={(e) => setNewCustomerData({...newCustomerData, email: e.target.value})}
+                      />
                     </div>
                     <div>
                       <label className="block mb-2 text-sm font-medium text-black">City</label>
-                      <input type="text" className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg block w-full p-2.5" placeholder="Enter city" />
+                      <input
+                        type="text"
+                        className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg block w-full p-2.5"
+                        placeholder="Enter city"
+                        value={newCustomerData.city}
+                        onChange={(e) => setNewCustomerData({...newCustomerData, city: e.target.value})}
+                      />
                     </div>
-                    <div>
-                      <label className="block mb-2 text-sm font-medium text-black">Address Line</label>
-                      <textarea rows="2" className="block p-2.5 w-full text-sm text-gray-900 bg-gray-50 rounded-lg border border-gray-300" placeholder="Enter address" />
-                    </div>
-                    <div>
-                      <label className="block mb-2 text-sm font-medium text-black">Due Amount</label>
-                      <input type="text" className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg block w-full p-2.5" placeholder="Enter due amount" />
+                    <div className="col-span-2">
+                      <label className="block mb-2 text-sm font-medium text-black">Address</label>
+                      <textarea
+                        rows="2"
+                        className="block p-2.5 w-full text-sm text-gray-900 bg-gray-50 rounded-lg border border-gray-300"
+                        placeholder="Enter address"
+                        value={newCustomerData.address}
+                        onChange={(e) => setNewCustomerData({...newCustomerData, address: e.target.value})}
+                      />
                     </div>
                   </div>
                 </div>
                 <div className="flex items-center justify-end p-4 border-t border-gray-200 rounded-b md:p-5">
-                  <button type="submit" className="text-white bg-blue-700 hover:bg-blue-800 rounded-lg text-sm px-5 py-2.5">Save</button>
+                  <button type="submit" className="text-white bg-blue-700 hover:bg-blue-800 rounded-lg text-sm px-5 py-2.5">Save Customer</button>
                   <button type="button" onClick={() => setShowCustomerModal(false)} className="py-2.5 px-5 ms-3 text-sm font-medium text-gray-900 bg-white rounded-lg border border-gray-200 hover:bg-gray-100">Cancel</button>
                 </div>
               </div>
@@ -976,16 +1445,10 @@ function Billing({ onBackToMain }) {
           </div>
         )}
 
+        {/* Payment Modal */}
         {showPaymentModal && (
           <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto overflow-x-hidden bg-black/50 p-4">
-            <form
-              className="relative w-full max-w-3xl max-h-full p-4"
-              onSubmit={(e) => {
-                e.preventDefault();
-                frontendOnlyNotice('Payment submission');
-                setShowPaymentModal(false);
-              }}
-            >
+            <form className="relative w-full max-w-3xl max-h-full p-4" onSubmit={processPayment}>
               <div className="relative bg-white rounded-lg shadow">
                 <div className="flex items-center justify-between p-4 border-b rounded-t md:p-5">
                   <h3 className="text-xl font-semibold text-gray-900">Make Payment</h3>
@@ -999,17 +1462,16 @@ function Billing({ onBackToMain }) {
                 <div className="p-4 space-y-4 md:p-5">
                   <div className="billing-payment-card mb-4 p-4 rounded-lg">
                     <label htmlFor="ci_received_amount" className="block mb-2 text-sm font-semibold text-[#2847a5]">
-                      <i className="fas fa-hand-holding-usd mr-1" /> Received Amount (Cash in hand)
+                      <i className="fas fa-hand-holding-usd mr-1" /> Received Amount
                     </label>
                     <input
                       type="number"
                       id="ci_received_amount"
-                      name="ci_received_amount"
                       step="0.01"
                       min="0"
                       defaultValue={totals.grandTotal.toFixed(2)}
                       className="billing-payment-input text-gray-900 text-lg font-semibold rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-3"
-                      placeholder="Enter amount received from customer (e.g., 5000.00)"
+                      placeholder="Enter amount received"
                     />
                     <p className="text-sm text-gray-600 mt-2">
                       <i className="fas fa-info-circle mr-1" /> Grand Total: Rs. {totals.grandTotal.toFixed(2)}
@@ -1018,7 +1480,7 @@ function Billing({ onBackToMain }) {
 
                   <div className="billing-invoice-card mb-4 p-4 rounded-lg">
                     <h4 className="text-sm font-bold text-[#2f3fa3] mb-3 flex items-center gap-2">
-                      <i className="fas fa-file-invoice" /> Customer Invoice
+                      <i className="fas fa-file-invoice" /> Payment Type
                     </h4>
                     <label className="inline-flex items-center gap-3 cursor-pointer select-none mb-3">
                       <span className="text-sm text-gray-600">Credit Bill (pay later)</span>
@@ -1029,7 +1491,6 @@ function Billing({ onBackToMain }) {
                       </div>
                       <span className="text-sm text-gray-600">Debit Bill (paid now)</span>
                     </label>
-                    <p className="text-xs text-gray-500 mb-3">Unchecked = Credit Bill  ·  Checked = Debit Bill (requires split payment below)</p>
 
                     <div className="mt-3">
                       <div className="flex items-center justify-between mb-2">
@@ -1054,7 +1515,6 @@ function Billing({ onBackToMain }) {
                                   <span>{row.source}</span>
                                   <i className={`fas fa-chevron-${row.isOpen ? 'up' : 'down'} text-xs text-gray-500`} />
                                 </button>
-
                                 {row.isOpen && (
                                   <div className="billing-source-dropdown absolute z-20 mt-1 w-full bg-white rounded-lg p-2">
                                     <div className="relative mb-2">
@@ -1086,7 +1546,6 @@ function Billing({ onBackToMain }) {
                                   </div>
                                 )}
                               </div>
-
                               <input
                                 type="text"
                                 inputMode="decimal"
@@ -1095,15 +1554,14 @@ function Billing({ onBackToMain }) {
                                 onBlur={() => handlePaymentAmountBlur(row.id)}
                                 className="billing-source-amount col-span-4 border border-gray-300 text-gray-900 text-sm rounded-lg p-2.5"
                               />
-
                               <button type="button" onClick={() => handleRemovePaymentRow(row.id)} className="billing-source-remove col-span-1 h-[44px] text-lg font-bold rounded">×</button>
                             </div>
                           );
                         })}
                       </div>
                       <div className="billing-split-total mt-3 flex items-center justify-between px-3 py-2 border border-gray-300 rounded-lg text-sm">
-                        <span className="font-semibold text-gray-600 text-sm">Split Total:</span>
-                        <span className="font-bold text-gray-800 text-sm">Rs. {splitTotal}</span>
+                        <span className="font-semibold text-gray-600">Split Total:</span>
+                        <span className="font-bold text-gray-800">Rs. {splitTotal}</span>
                       </div>
                     </div>
                   </div>
@@ -1121,13 +1579,6 @@ function Billing({ onBackToMain }) {
                       <span className="text-gray-500 uppercase text-xs font-medium">Discount</span>
                       <span className="font-semibold text-gray-800">Rs. {totals.totalDiscount.toFixed(2)}</span>
                     </div>
-                    <div className="flex justify-between items-center px-4 py-2">
-                      <span className="text-gray-500 uppercase text-xs font-medium">Additional Discount</span>
-                      <span className="flex items-center gap-2 text-xs">
-                        <button type="button" className="billing-additional-clear px-3 py-1 rounded">Clear</button>
-                        <input type="text" value="Discount amount" readOnly className="billing-additional-input w-32 px-2 py-1 rounded" />
-                      </span>
-                    </div>
                     <div className="flex justify-between px-4 py-2 bg-white">
                       <span className="text-gray-700 uppercase text-xs font-bold">Grand Total</span>
                       <span className="font-bold text-gray-900 text-base">Rs. {totals.grandTotal.toFixed(2)}</span>
@@ -1136,12 +1587,23 @@ function Billing({ onBackToMain }) {
                 </div>
 
                 <div className="flex items-center justify-end p-4 border-t border-gray-200 rounded-b md:p-5">
-                  <button type="submit" className="text-white bg-blue-700 hover:bg-blue-800 rounded-lg text-sm px-5 py-2.5">Pay</button>
+                  <button type="submit" className="text-white bg-blue-700 hover:bg-blue-800 rounded-lg text-sm px-5 py-2.5" disabled={isProcessing}>
+                    {isProcessing ? 'Processing...' : 'Pay Now'}
+                  </button>
                   <button type="button" onClick={() => setShowPaymentModal(false)} className="py-2.5 px-5 ms-3 text-sm font-medium text-gray-900 bg-white rounded-lg border border-gray-200 hover:bg-gray-100">Cancel</button>
                 </div>
               </div>
             </form>
           </div>
+        )}
+
+        {/* Bill Modal - Shows after successful payment */}
+        {billData && (
+          <BillModal
+            billHtml={billData.html}
+            salesCode={billData.salesCode}
+            onClose={() => setBillData(null)}
+          />
         )}
       </div>
     </Layout>
